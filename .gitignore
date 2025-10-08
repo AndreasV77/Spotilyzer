@@ -13,3 +13,5 @@ output/
 # OS/Editor
 .DS_Store
 Thumbs.db
+
+# local_audio/
