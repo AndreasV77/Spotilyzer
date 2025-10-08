@@ -1,0 +1,15 @@
+# Python / venv
+.venv312/
+__pycache__/
+*.pyc
+
+# Tokens/Secrets
+.env
+.cache/
+
+# Output-Artefakte
+output/
+
+# OS/Editor
+.DS_Store
+Thumbs.db
