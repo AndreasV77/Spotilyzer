@@ -50,7 +50,7 @@ Fill `input_spotify_tracks.csv` with a column `track` that contains either Spoti
 
 Run:
 ```bash
-python3 spotify_audio_features_batch.py --in input_spotify_tracks.csv --out spotify_features.csv
+python3 spotify_audio_features_batch.py --in ./input/input_spotify_tracks.csv --out ./output/spotify_features.csv
 ```
 
 **Option 2: by Search Queries (title + artist)**  
@@ -59,7 +59,7 @@ The script finds the top Spotify match and fetches the features.
 
 Run:
 ```bash
-python3 spotify_audio_features_batch.py --search input_spotify_search.csv --out spotify_features.csv
+python3 spotify_audio_features_batch.py --search ./input/input_spotify_search.csv --out ./output/spotify_features.csv
 ```
 
 The output includes typical Spotify audio features (danceability, energy, valence, tempo, loudness, key, mode, time_signature, speechiness, instrumentalness, liveness, acousticness) plus Spotify popularity.
@@ -70,7 +70,7 @@ The output includes typical Spotify audio features (danceability, energy, valenc
 
 Put WAV/MP3/FLAC files into `./local_audio/` (or anywhere). Then run:
 ```bash
-python3 local_audio_features.py --in ./local_audio --out local_features.csv
+python3 local_audio_features.py --in ./local_audio --out ./output/local_features.csv
 ```
 
 This extracts:
