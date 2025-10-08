@@ -15,3 +15,6 @@ output/
 Thumbs.db
 
 # local_audio/
+local_audio/
+!local_audio/.gitkeep
+
