@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import argparse
 from pathlib import Path
 from urllib.parse import urlparse
@@ -23,6 +24,55 @@ AUDIO_FEAT_COLS = [
     "danceability","energy","valence","tempo","loudness","key","mode",
     "time_signature","speechiness","acousticness","instrumentalness","liveness"
 ]
+
+MAX_RETRIES = 5
+REQUEST_SLEEP = 0.02
+
+
+class ApiMetrics:
+    def __init__(self):
+        self.retries_429 = 0
+        self.skipped_404 = 0
+
+
+def api_call_with_retries(fn, metrics: ApiMetrics, context: str, *args, **kwargs):
+    retries = 0
+    while True:
+        try:
+            result = fn(*args, **kwargs)
+            if REQUEST_SLEEP:
+                time.sleep(REQUEST_SLEEP)
+            return result
+        except SpotifyException as e:
+            status = getattr(e, "http_status", None)
+            headers = getattr(e, "headers", {}) or {}
+            if status == 429 and retries < MAX_RETRIES:
+                retry_after = headers.get("Retry-After") if isinstance(headers, dict) else None
+                try:
+                    retry_after = float(retry_after) if retry_after is not None else None
+                except (TypeError, ValueError):
+                    retry_after = None
+                sleep_s = retry_after if retry_after is not None else 1.0
+                metrics.retries_429 += 1
+                print(f"[WARN] 429 rate limited for {context} → retry in {sleep_s:.2f}s", file=sys.stderr)
+                time.sleep(sleep_s)
+                retries += 1
+                continue
+            if status == 404:
+                metrics.skipped_404 += 1
+                print(f"[WARN] 404 not found for {context}: {e}", file=sys.stderr)
+                return None
+            if status and 400 <= status < 600 and retries < 1:
+                retries += 1
+                print(
+                    f"[WARN] Spotify API error (status={status}) for {context}, retrying once: {e}",
+                    file=sys.stderr,
+                )
+                time.sleep(1.0)
+                continue
+            print(f"[ERROR] Spotify API error for {context} (status={status}): {e}", file=sys.stderr)
+            raise
+
 
 def get_spotify_client(use_client_credentials: bool):
     load_dotenv()
@@ -55,13 +105,17 @@ def extract_playlist_id_or_name(s: str):
     # else treat as a name to search
     return None, s
 
-def resolve_playlist_id_from_name(sp, name: str, market: str):
+def resolve_playlist_id_from_name(sp, metrics: ApiMetrics, name: str, market: str):
     q = f'playlist:"{name}"'
-    res = sp.search(q, type="playlist", limit=5, market=market)
+    res = api_call_with_retries(sp.search, metrics, f"search playlist name={name!r}", q, type="playlist", limit=5, market=market)
+    if res is None:
+        return None, None
     items = res.get("playlists", {}).get("items", [])
     if not items:
         # try without quotes
-        res = sp.search(name, type="playlist", limit=5, market=market)
+        res = api_call_with_retries(sp.search, metrics, f"search playlist fallback name={name!r}", name, type="playlist", limit=5, market=market)
+        if res is None:
+            return None, None
         items = res.get("playlists", {}).get("items", [])
     if items:
         # choose official Spotify-owned first if present
@@ -69,11 +123,23 @@ def resolve_playlist_id_from_name(sp, name: str, market: str):
         return items_sorted[0]["id"], items_sorted[0]["name"]
     return None, None
 
-def fetch_all_playlist_tracks(sp, playlist_id: str, market: str):
-    results = sp.playlist_items(playlist_id, additional_types=["track"], limit=100, market=market)
+def fetch_all_playlist_tracks(sp, metrics: ApiMetrics, playlist_id: str, market: str):
+    results = api_call_with_retries(
+        sp.playlist_items,
+        metrics,
+        f"playlist_items {playlist_id}",
+        playlist_id,
+        additional_types=["track"],
+        limit=100,
+        market=market,
+    )
+    if results is None:
+        return []
     items = results.get("items", [])
     while results.get("next"):
-        results = sp.next(results)
+        results = api_call_with_retries(sp.next, metrics, f"playlist_items next {playlist_id}", results)
+        if results is None:
+            break
         items.extend(results.get("items", []))
     tracks = []
     for it in items:
@@ -82,31 +148,38 @@ def fetch_all_playlist_tracks(sp, playlist_id: str, market: str):
             tracks.append(tr)
     return tracks
 
-def fetch_audio_features(sp, track_ids):
+def fetch_audio_features(sp, metrics: ApiMetrics, track_ids):
     feats = []
     for i in range(0, len(track_ids), 100):
         batch = track_ids[i:i+100]
-        feats.extend(sp.audio_features(batch))
+        batch_feats = api_call_with_retries(sp.audio_features, metrics, f"audio_features batch starting {batch[0] if batch else 'empty'}", batch)
+        if batch_feats is None:
+            batch_feats = [None] * len(batch)
+        feats.extend(batch_feats)
     return feats
 
-def analyze_playlist(sp, playlist_ref: str, outdir: Path, market: str):
+def analyze_playlist(sp, metrics: ApiMetrics, playlist_ref: str, outdir: Path, market: str):
     pid, pname = extract_playlist_id_or_name(playlist_ref)
     if not pid and pname:
-        resolved_id, resolved_name = resolve_playlist_id_from_name(sp, pname, market)
+        resolved_id, resolved_name = resolve_playlist_id_from_name(sp, metrics, pname, market)
         if not resolved_id:
-            raise RuntimeError(f'Could not resolve playlist by name "{pname}" in market={market}')
+            print(f"[WARN] Could not resolve playlist by name '{pname}' in market={market}", file=sys.stderr)
+            return None
         pid = resolved_id
         pname = resolved_name
 
     # Try to fetch playlist with market param
-    pl = sp.playlist(pid, market=market)
+    pl = api_call_with_retries(sp.playlist, metrics, f"playlist {pid}", pid, market=market)
+    if pl is None:
+        return None
     name = pl["name"]
-    tracks = fetch_all_playlist_tracks(sp, pid, market=market)
+    tracks = fetch_all_playlist_tracks(sp, metrics, pid, market=market)
     if not tracks:
-        raise RuntimeError(f"No tracks found for playlist {name} ({pid}) in market={market}")
+        print(f"[WARN] No tracks found for playlist {name} ({pid}) in market={market}", file=sys.stderr)
+        return None
 
     ids = [t["id"] for t in tracks if t.get("id")]
-    feats = fetch_audio_features(sp, ids)
+    feats = fetch_audio_features(sp, metrics, ids)
 
     rows = []
     for t, f in zip(tracks, feats):
@@ -147,21 +220,32 @@ def analyze_playlist(sp, playlist_ref: str, outdir: Path, market: str):
 def run_for_markets(playlists, outdir: Path, markets, use_client_credentials: bool):
     # prefer CC for public playlists
     sp = get_spotify_client(use_client_credentials=use_client_credentials)
+    metrics = ApiMetrics()
     all_stats = []
     created = []
     pids_names = []  # (safe_name, pid)
+    processed = 0
+    skipped_playlists = 0
+    failures = 0
     for pl in playlists:
         for m in markets:
             try:
-                raw, stats, name, pid, safe_name = analyze_playlist(sp, pl, outdir, market=m)
+                result = analyze_playlist(sp, metrics, pl, outdir, market=m)
+                if result is None:
+                    skipped_playlists += 1
+                    continue
+                raw, stats, name, pid, safe_name = result
                 pids_names.append((safe_name, pid))
                 created.append(raw); created.append(stats)
                 s = pd.read_csv(stats); s.insert(0, "source", name); all_stats.append(s)
                 print(f"OK: {name} ({pid}) [{m}]")
+                processed += 1
             except SpotifyException as se:
-                print(f"ERROR for {pl} [{m}]: {se}")
+                failures += 1
+                print(f"ERROR for {pl} [{m}]: {se}", file=sys.stderr)
             except Exception as e:
-                print(f"ERROR for {pl} [{m}]: {e}")
+                failures += 1
+                print(f"ERROR for {pl} [{m}]: {e}", file=sys.stderr)
 
     if all_stats:
         summary = pd.concat(all_stats, ignore_index=True)
@@ -169,6 +253,12 @@ def run_for_markets(playlists, outdir: Path, markets, use_client_credentials: bo
         summary.to_csv(summary_path, index=False)
         created.append(str(summary_path))
         print(f"Wrote summary: {summary_path}")
+
+    print(
+        f"[SUMMARY] Processed {processed} playlist-market combinations, skipped {metrics.skipped_404} due to 404 "
+        f"(total skipped {skipped_playlists}), retried {metrics.retries_429} times on 429, other failures {failures}.",
+        file=sys.stderr,
+    )
 
     return created, sorted(set(pids_names))
 
