@@ -9,6 +9,30 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth, SpotifyClientCredentials
 from spotipy.exceptions import SpotifyException
 
+
+def log_error(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
+def _retry_hint(headers):
+    if not headers:
+        return ""
+    retry_after = headers.get("Retry-After") if isinstance(headers, dict) else None
+    if retry_after:
+        return f" (Retry after {retry_after} seconds)"
+    return ""
+
+
+def _handle_spotify_exception(action: str, error: SpotifyException):
+    status = getattr(error, "http_status", None)
+    headers = getattr(error, "headers", None)
+    if status == 404:
+        raise RuntimeError(f"Spotify resource not found while {action}.") from None
+    if status == 429:
+        hint = _retry_hint(headers)
+        raise RuntimeError(f"Rate limit hit while {action}.{hint}") from None
+    raise error
+
 DEFAULT_PLAYLISTS = [
     "37i9dQZEVXbMDoHDwVN2tF",  # Top 50 Global
     "37i9dQZF1DWXRqgorJj26U",  # Rock This
@@ -70,10 +94,16 @@ def resolve_playlist_id_from_name(sp, name: str, market: str):
     return None, None
 
 def fetch_all_playlist_tracks(sp, playlist_id: str, market: str):
-    results = sp.playlist_items(playlist_id, additional_types=["track"], limit=100, market=market)
+    try:
+        results = sp.playlist_items(playlist_id, additional_types=["track"], limit=100, market=market)
+    except SpotifyException as error:
+        _handle_spotify_exception("fetching playlist items", error)
     items = results.get("items", [])
     while results.get("next"):
-        results = sp.next(results)
+        try:
+            results = sp.next(results)
+        except SpotifyException as error:
+            _handle_spotify_exception("paging playlist items", error)
         items.extend(results.get("items", []))
     tracks = []
     for it in items:
@@ -86,7 +116,10 @@ def fetch_audio_features(sp, track_ids):
     feats = []
     for i in range(0, len(track_ids), 100):
         batch = track_ids[i:i+100]
-        feats.extend(sp.audio_features(batch))
+        try:
+            feats.extend(sp.audio_features(batch))
+        except SpotifyException as error:
+            _handle_spotify_exception("fetching audio features", error)
     return feats
 
 def analyze_playlist(sp, playlist_ref: str, outdir: Path, market: str):
@@ -99,7 +132,10 @@ def analyze_playlist(sp, playlist_ref: str, outdir: Path, market: str):
         pname = resolved_name
 
     # Try to fetch playlist with market param
-    pl = sp.playlist(pid, market=market)
+    try:
+        pl = sp.playlist(pid, market=market)
+    except SpotifyException as error:
+        _handle_spotify_exception("fetching playlist metadata", error)
     name = pl["name"]
     tracks = fetch_all_playlist_tracks(sp, pid, market=market)
     if not tracks:
@@ -158,10 +194,12 @@ def run_for_markets(playlists, outdir: Path, markets, use_client_credentials: bo
                 created.append(raw); created.append(stats)
                 s = pd.read_csv(stats); s.insert(0, "source", name); all_stats.append(s)
                 print(f"OK: {name} ({pid}) [{m}]")
+            except RuntimeError as err:
+                log_error(f"ERROR for {pl} [{m}]: {err}")
             except SpotifyException as se:
-                print(f"ERROR for {pl} [{m}]: {se}")
+                log_error(f"Spotify API error for {pl} [{m}]: {se}")
             except Exception as e:
-                print(f"ERROR for {pl} [{m}]: {e}")
+                log_error(f"ERROR for {pl} [{m}]: {e}")
 
     if all_stats:
         summary = pd.concat(all_stats, ignore_index=True)
