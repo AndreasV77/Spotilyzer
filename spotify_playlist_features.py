@@ -338,11 +338,12 @@ def main():
     outdir = Path(args.outdir)
     summary_out = Path(args.out).expanduser() if args.out else None
 
-    if summary_out and summary_out.exists() and not args.overwrite:
-        print(f"[ERROR] Output file already exists: {summary_out}. Use --overwrite to replace it.", file=sys.stderr)
-        sys.exit(2)
-    if summary_out and summary_out.exists() and args.overwrite:
-        print(f"[INFO] Overwriting existing output file: {summary_out}", file=sys.stderr)
+    if summary_out and summary_out.exists():
+        if args.overwrite:
+            print(f"[INFO] Overwriting existing output file: {summary_out}", file=sys.stderr)
+        else:
+            print(f"[ERROR] Output file already exists: {summary_out}. Use --overwrite to replace it.", file=sys.stderr)
+            sys.exit(2)
 
     selected_markets = []
     if args.markets:
