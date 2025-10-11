@@ -3,6 +3,7 @@ import sys
 import time
 import argparse
 from pathlib import Path
+from typing import Optional
 from urllib.parse import urlparse
 import pandas as pd
 from dotenv import load_dotenv
@@ -36,7 +37,8 @@ class ApiMetrics:
 
 
 def api_call_with_retries(fn, metrics: ApiMetrics, context: str, *args, **kwargs):
-    retries = 0
+    retries_429 = 0
+    retries_5xx = 0
     while True:
         try:
             result = fn(*args, **kwargs)
@@ -45,25 +47,24 @@ def api_call_with_retries(fn, metrics: ApiMetrics, context: str, *args, **kwargs
             return result
         except SpotifyException as e:
             status = getattr(e, "http_status", None)
-            headers = getattr(e, "headers", {}) or {}
-            if status == 429 and retries < MAX_RETRIES:
+            headers = getattr(e, "headers", {})
+            if status == 429 and retries_429 < MAX_RETRIES:
                 retry_after = headers.get("Retry-After") if isinstance(headers, dict) else None
                 try:
-                    retry_after = float(retry_after) if retry_after is not None else None
+                    sleep_s = float(retry_after) if retry_after is not None else 1.0
                 except (TypeError, ValueError):
-                    retry_after = None
-                sleep_s = retry_after if retry_after is not None else 1.0
+                    sleep_s = 1.0
                 metrics.retries_429 += 1
                 print(f"[WARN] 429 rate limited for {context} → retry in {sleep_s:.2f}s", file=sys.stderr)
                 time.sleep(sleep_s)
-                retries += 1
+                retries_429 += 1
                 continue
             if status == 404:
                 metrics.skipped_404 += 1
                 print(f"[WARN] 404 not found for {context}: {e}", file=sys.stderr)
                 return None
-            if status and 400 <= status < 600 and retries < 1:
-                retries += 1
+            if status and 500 <= status < 600 and retries_5xx < 1:
+                retries_5xx += 1
                 print(
                     f"[WARN] Spotify API error (status={status}) for {context}, retrying once: {e}",
                     file=sys.stderr,
@@ -129,7 +130,7 @@ def fetch_all_playlist_tracks(sp, metrics: ApiMetrics, playlist_id: str, market:
         metrics,
         f"playlist_items {playlist_id}",
         playlist_id,
-        additional_types=["track"],
+        additional_types="track",
         limit=100,
         market=market,
     )
@@ -207,7 +208,12 @@ def analyze_playlist(sp, metrics: ApiMetrics, playlist_ref: str, outdir: Path, m
     df.to_csv(raw_path, index=False)
 
     num_cols = [c for c in AUDIO_FEAT_COLS if c in df.columns]
-    agg = df[num_cols].astype(float).describe().loc[["mean","std","min","25%","50%","75%","max"]]
+    agg = (
+        df[num_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .describe()
+        .loc[["mean","std","min","25%","50%","75%","max"]]
+    )
     agg.insert(0, "playlist_name", name)
     agg.insert(1, "playlist_id", pid)
     agg.insert(2, "market", market)
@@ -217,7 +223,7 @@ def analyze_playlist(sp, metrics: ApiMetrics, playlist_ref: str, outdir: Path, m
     agg.to_csv(agg_path, index=False)
     return str(raw_path), str(agg_path), name, pid, safe_name
 
-def run_for_markets(playlists, outdir: Path, markets, use_client_credentials: bool):
+def run_for_markets(playlists, outdir: Path, markets, use_client_credentials: bool, summary_path: Optional[Path] = None):
     # prefer CC for public playlists
     sp = get_spotify_client(use_client_credentials=use_client_credentials)
     metrics = ApiMetrics()
@@ -249,10 +255,14 @@ def run_for_markets(playlists, outdir: Path, markets, use_client_credentials: bo
 
     if all_stats:
         summary = pd.concat(all_stats, ignore_index=True)
-        summary_path = outdir / f"summary_stats_{'_'.join(markets)}.csv"
-        summary.to_csv(summary_path, index=False)
-        created.append(str(summary_path))
-        print(f"Wrote summary: {summary_path}")
+        if summary_path is None:
+            target_summary_path = outdir / f"summary_stats_{'_'.join(markets)}.csv"
+        else:
+            target_summary_path = Path(summary_path)
+        target_summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary.to_csv(target_summary_path, index=False)
+        created.append(str(target_summary_path))
+        print(f"Wrote summary: {target_summary_path}")
 
     print(
         f"[SUMMARY] Processed {processed} playlist-market combinations, skipped {metrics.skipped_404} due to 404 "
@@ -275,7 +285,12 @@ def merge_markets(outdir: Path, safe_name: str, pid: str, markets):
     merged.to_csv(merged_path, index=False)
 
     num_cols = [c for c in AUDIO_FEAT_COLS if c in merged.columns]
-    agg = merged[num_cols].astype(float).describe().loc[["mean","std","min","25%","50%","75%","max"]]
+    agg = (
+        merged[num_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .describe()
+        .loc[["mean","std","min","25%","50%","75%","max"]]
+    )
     agg.insert(0, "playlist_name", merged["playlist_name"].iloc[0])
     agg.insert(1, "playlist_id", pid)
     agg.insert(2, "market", "MERGED")
@@ -303,6 +318,7 @@ def parse_args():
     ap = argparse.ArgumentParser(description="Spotify playlist feature harvester (multi-market)")
     ap.add_argument("--playlists", nargs="+", help="Playlist IDs, URLs, or names (default: built-in set)")
     ap.add_argument("--outdir", default="spotify_playlists", help="Output directory")
+    ap.add_argument("--out", help="Summary CSV output path (optional)")
     ap.add_argument("--markets", nargs="+", choices=list(MARKETS.keys()),
                     help="Markets to fetch (e.g., DE US UK)")
     ap.add_argument("-DE", action="store_true", help="Shortcut: fetch DE only")
@@ -312,6 +328,7 @@ def parse_args():
     ap.add_argument("-m", "--merge", action="store_true", help="After fetching multiple markets, create merged lists")
     ap.add_argument("--use-client-credentials", action="store_true",
                     help="Use client-credentials auth (recommended for public playlists)")
+    ap.add_argument("--overwrite", action="store_true", help="Overwrite existing --out file if set")
     ap.add_argument("--no-menu", action="store_true", help="Do not show menu if no flags provided")
     return ap.parse_args()
 
@@ -319,6 +336,13 @@ def main():
     args = parse_args()
     playlists = args.playlists or DEFAULT_PLAYLISTS
     outdir = Path(args.outdir)
+    summary_out = Path(args.out).expanduser() if args.out else None
+
+    if summary_out and summary_out.exists() and not args.overwrite:
+        print(f"[ERROR] Output file already exists: {summary_out}. Use --overwrite to replace it.", file=sys.stderr)
+        sys.exit(2)
+    if summary_out and summary_out.exists() and args.overwrite:
+        print(f"[INFO] Overwriting existing output file: {summary_out}", file=sys.stderr)
 
     selected_markets = []
     if args.markets:
@@ -342,9 +366,14 @@ def main():
 
     print(f"Playlists: {playlists}")
     print(f"Markets: {selected_markets}")
+    auth_mode = "client-credentials" if args.use_client_credentials else "user-auth"
+    print(f"[INFO] Auth mode: {auth_mode}", file=sys.stderr)
     created_files, pid_pairs = run_for_markets(
-        playlists, outdir, selected_markets,
-        use_client_credentials=args.use_client_credentials or True
+        playlists,
+        outdir,
+        selected_markets,
+        use_client_credentials=args.use_client_credentials,
+        summary_path=summary_out,
     )
 
     if args.merge and len(selected_markets) > 1:
