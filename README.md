@@ -1,4 +1,4 @@
-# Music Analysis Toolkit (Spotify Web API + Local MIR)
+# Spotilyzer - Music Analysis Toolkit (Spotify Web API + Local MIR)
 
 This mini toolkit gives you two complementary paths:
 
