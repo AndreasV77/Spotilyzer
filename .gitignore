@@ -1,7 +1,11 @@
 # Python / venv
-.venv312/
+.venv*/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
 
 # Tokens/Secrets
 .env
@@ -13,8 +17,21 @@ output/
 # OS/Editor
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
 
-# local_audio/
+# Training-Daten (zu groß für Git)
+embeddings/
+previews/
+scout_results/
+scout_results_deezer/
+
+# PyInstaller
+*.spec.bak
+
+# Audio-Dateien (Test/Local)
 local_audio/
 !local_audio/.gitkeep
 
+# Spotilyzer Runtime
+spotilyzer_results.json

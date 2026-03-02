@@ -1,0 +1,18 @@
+# training/requirements.txt
+# ══════════════════════════════════════════════════════════════════════════════
+# Training-Pipeline Dependencies (nicht in Exe gepackt)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Basis (auch in Runtime) ──────────────────────────────────────────────────
+torch>=2.0.0
+torchaudio>=2.0.0
+transformers>=4.30.0
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+joblib>=1.3.0
+numpy>=1.24.0
+
+# ── Training-spezifisch ─────────────────────────────────────────────────────
+pandas>=2.0.0
+requests>=2.31.0
+tqdm>=4.65.0
