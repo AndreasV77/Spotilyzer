@@ -1,0 +1,1 @@
+"""CLI-Interface für Spotilyzer."""

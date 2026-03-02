@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "spotilyzer"
+version = "2.0.0"
+description = "Hit/Mid/Flop Audio Analyzer — bewertet die Mainstream-Kompatibilität von Audio-Tracks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Andreas Vogelsang"},
+]
+
+dependencies = [
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "transformers>=4.30.0",
+    "xgboost>=2.0.0",
+    "scikit-learn>=1.3.0",
+    "joblib>=1.3.0",
+    "numpy>=1.24.0",
+    "PySide6>=6.7.0",
+]
+
+[project.optional-dependencies]
+training = [
+    "pandas>=2.0.0",
+    "requests>=2.28.0",
+    "tqdm>=4.65.0",
+]
+dev = [
+    "pyinstaller>=6.0.0",
+    "pytest>=7.0.0",
+]
+
+[project.scripts]
+spotilyzer = "spotilyzer.gui.app:run_app"
+spotilyzer-cli = "spotilyzer.cli.analyze:main"
+
+[project.gui-scripts]
+spotilyzer-gui = "spotilyzer.gui.app:run_app"
+
+[tool.setuptools.packages.find]
+include = ["spotilyzer*"]
+exclude = ["training*", "legacy*", "tests*"]
