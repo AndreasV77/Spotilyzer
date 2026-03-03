@@ -175,7 +175,7 @@ class HistoryPanel(QDockWidget):
         if result.is_error:
             text = f"\u274c  {result.timestamp[:16]}  {result.file}"
             item = QListWidgetItem(text)
-            item.setForeground(QColor("#f38ba8"))
+            item.setForeground(QColor("#ef4444"))  # Flop-Rot: leserlich in dark + light
         else:
             emoji = self.RATING_EMOJIS.get(result.rating, "?")
             rating_text = result.rating.upper() if result.rating else "?"
@@ -190,7 +190,7 @@ class HistoryPanel(QDockWidget):
             )
             item = QListWidgetItem(text)
 
-            color = self.RATING_COLORS.get(result.rating, QColor("#a5a5a5"))
+            color = self.RATING_COLORS.get(result.rating, QColor("#888888"))
             item.setForeground(color)
 
         item.setToolTip(result.path)

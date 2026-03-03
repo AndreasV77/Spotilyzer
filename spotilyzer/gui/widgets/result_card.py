@@ -75,12 +75,12 @@ class ResultCard(QFrame):
     def _setup_error_ui(self, layout: QVBoxLayout):
         """Fehler-Karte."""
         label = QLabel(f"\u274c {self.result.file}")
-        label.setStyleSheet("color: #f38ba8; font-weight: bold;")
+        label.setObjectName("ErrorLabel")
         layout.addWidget(label)
 
         if self.result.error:
             err = QLabel(self.result.error)
-            err.setStyleSheet("color: #a5a5a5; font-size: 11px;")
+            err.setObjectName("MutedLabel")
             err.setWordWrap(True)
             layout.addWidget(err)
 
@@ -94,15 +94,12 @@ class ResultCard(QFrame):
         header = QHBoxLayout()
         header.setSpacing(8)
 
-        # Medaille / Rang
+        # Medaille / Rang — Farbe kommt via QSS (#MedalLabel / #RankLabel)
         medal = MEDALS.get(self.rank, "")
         rank_text = medal if medal else f"#{self.rank + 1}"
         rank_label = QLabel(rank_text)
         rank_label.setFixedWidth(28)
-        rank_label.setStyleSheet(
-            f"font-size: 13px; font-weight: bold; "
-            f"color: {'#89b4fa' if medal else '#6c7086'};"
-        )
+        rank_label.setObjectName("MedalLabel" if medal else "RankLabel")
         header.addWidget(rank_label)
 
         # Dateiname

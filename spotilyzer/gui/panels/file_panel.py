@@ -39,6 +39,7 @@ class FilePanel(QDockWidget):
     """
 
     files_selected = Signal(list)
+    folder_changed = Signal(Path)   # emitted on user-driven navigation
 
     def __init__(self, parent=None):
         super().__init__("Dateien", parent)
@@ -135,7 +136,7 @@ class FilePanel(QDockWidget):
 
     # ── Navigation ───────────────────────────────────────────────────
 
-    def _navigate_to(self, path: Path) -> None:
+    def _navigate_to(self, path: Path, emit: bool = True) -> None:
         """Navigiert zum angegebenen Ordner."""
         if not path.is_dir():
             return
@@ -153,6 +154,8 @@ class FilePanel(QDockWidget):
 
         # Status aktualisieren
         self._update_status()
+        if emit:
+            self.folder_changed.emit(path)
 
     def _on_navigate_up(self) -> None:
         """Einen Ordner nach oben navigieren."""
@@ -228,8 +231,8 @@ class FilePanel(QDockWidget):
 
     # ── Public API ───────────────────────────────────────────────────
 
-    def set_folder(self, path: str) -> None:
-        """Setzt den aktuellen Ordner programmatisch."""
-        p = Path(path)
+    def set_folder(self, path) -> None:
+        """Setzt den aktuellen Ordner programmatisch (kein folder_changed-Signal)."""
+        p = Path(path) if not isinstance(path, Path) else path
         if p.is_dir():
-            self._navigate_to(p)
+            self._navigate_to(p, emit=False)

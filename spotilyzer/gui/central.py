@@ -40,6 +40,7 @@ class CentralWidget(QWidget):
         self._results: list[AnalysisResult] = []
         self._sort_mode = SortMode.SCORE
         self._app_mode = AppMode.BALANCED
+        self._open_dir: str = ""
 
         self._setup_ui()
 
@@ -127,6 +128,10 @@ class CentralWidget(QWidget):
         layout.addWidget(self._scroll_area, 1)  # stretch=1: nimmt verfügbaren Platz
 
     # ── Public API ──────────────────────────────────────────────────
+
+    def set_open_dir(self, path: str) -> None:
+        """Setzt das Standard-Verzeichnis für den Datei-Dialog."""
+        self._open_dir = path
 
     def set_status(self, text: str) -> None:
         """Aktualisiert den Status-Text."""
@@ -284,7 +289,7 @@ class CentralWidget(QWidget):
             files, _ = QFileDialog.getOpenFileNames(
                 self,
                 "Audio-Dateien auswählen",
-                "",
+                self._open_dir,
                 f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
             )
             if files:
