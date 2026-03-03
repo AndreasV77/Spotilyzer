@@ -199,12 +199,27 @@ QDockWidget::close-button, QDockWidget::float-button {{
     font-size: 14px;
 }}
 
+/* ── Dock-Panel-Inhalte & Scroll-Viewports ──────────────────────── */
+/* Verhindert platform-default (helles) Hintergrundfenster in dark mode */
+QDockWidget > QWidget {{
+    background-color: {c.bg_primary};
+}}
+
+QScrollArea {{
+    background-color: {c.bg_primary};
+    border: none;
+}}
+
+QAbstractScrollArea::viewport {{
+    background-color: {c.bg_primary};
+}}
+
 /* ── Result Cards ───────────────────────────────────────────────── */
+/* Kein QSS-padding: Python-layout.setContentsMargins() ist die einzige Quelle */
 #ResultCard {{
     background-color: {c.bg_card};
     border: 1px solid {c.border};
     border-radius: 8px;
-    padding: 10px;
 }}
 
 #ResultCard:hover {{
@@ -385,11 +400,13 @@ QComboBox QAbstractItemView {{
     color: {c.text_normal};
     border: 1px solid {c.border};
     selection-background-color: {c.accent};
+    selection-color: #ffffff;
 }}
 
 /* ── Labels ─────────────────────────────────────────────────────── */
 QLabel {{
     color: {c.text_normal};
+    background-color: transparent;
 }}
 
 QLabel#MutedLabel {{
@@ -405,6 +422,28 @@ QLabel#TitleLabel {{
 QLabel#SubtitleLabel {{
     color: {c.accent};
     font-size: 12px;
+}}
+
+/* ResultCard: Fehler-Label (Flop-Farbe für beide Modi lesbar) */
+QLabel#ErrorLabel {{
+    color: {c.flop};
+    font-weight: bold;
+    background-color: transparent;
+}}
+
+/* ResultCard: Rang-Nummern (gedämpft) und Medaillen-Zeilen (Accent) */
+QLabel#RankLabel {{
+    color: {c.text_muted};
+    font-size: 13px;
+    font-weight: bold;
+    background-color: transparent;
+}}
+
+QLabel#MedalLabel {{
+    color: {c.accent};
+    font-size: 13px;
+    font-weight: bold;
+    background-color: transparent;
 }}
 
 /* ── Stats-Leiste ───────────────────────────────────────────────── */
@@ -482,6 +521,7 @@ QMenuBar {{
 
 QMenuBar::item:selected {{
     background-color: {c.accent};
+    color: #ffffff;
 }}
 
 QMenu {{
@@ -492,6 +532,102 @@ QMenu {{
 
 QMenu::item:selected {{
     background-color: {c.accent};
+    color: #ffffff;
+}}
+
+/* ── GroupBox ────────────────────────────────────────────────────── */
+QGroupBox {{
+    background-color: {c.bg_primary};
+    color: {c.text_normal};
+    border: 1px solid {c.border};
+    border-radius: 6px;
+    margin-top: 10px;
+    font-weight: bold;
+    font-size: 12px;
+}}
+
+QGroupBox::title {{
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 2px 8px;
+    color: {c.text_muted};
+    background-color: {c.bg_primary};
+}}
+
+/* ── CheckBox & RadioButton ─────────────────────────────────────── */
+QCheckBox {{
+    color: {c.text_normal};
+    spacing: 6px;
+    background-color: transparent;
+}}
+
+QCheckBox::indicator {{
+    width: 16px;
+    height: 16px;
+    border: 1px solid {c.border};
+    border-radius: 3px;
+    background-color: {c.bg_card};
+}}
+
+QCheckBox::indicator:checked {{
+    background-color: {c.accent};
+    border-color: {c.accent};
+}}
+
+QCheckBox::indicator:hover {{
+    border-color: {c.accent};
+}}
+
+QRadioButton {{
+    color: {c.text_normal};
+    spacing: 6px;
+    background-color: transparent;
+}}
+
+QRadioButton::indicator {{
+    width: 16px;
+    height: 16px;
+    border: 1px solid {c.border};
+    border-radius: 8px;
+    background-color: {c.bg_card};
+}}
+
+QRadioButton::indicator:checked {{
+    background-color: {c.accent};
+    border-color: {c.accent};
+}}
+
+/* ── Tabellen & Listen: Selektion leserlich ─────────────────────── */
+QTableView::item:selected {{
+    color: {c.text_normal};
+    background-color: {c.selection};
+}}
+
+QListWidget {{
+    background-color: {c.bg_primary};
+    color: {c.text_normal};
+    border: 1px solid {c.border};
+    outline: none;
+}}
+
+QListWidget::item {{
+    padding: 4px 8px;
+    border-radius: 4px;
+}}
+
+QListWidget::item:selected {{
+    background-color: {c.selection};
+    color: {c.text_normal};
+}}
+
+QListWidget::item:hover {{
+    background-color: {c.bg_secondary};
+}}
+
+/* ── Waveform-Widget ────────────────────────────────────────────── */
+WaveformWidget {{
+    background-color: {c.bg_card};
+    border-radius: 4px;
 }}
 
 /* ── Rating-spezifische Farben ──────────────────────────────────── */
