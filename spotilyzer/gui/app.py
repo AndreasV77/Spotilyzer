@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt, QSettings, QTimer
-from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QColor, QIcon, QKeySequence, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -77,6 +77,11 @@ class SpotilyzerApp(QMainWindow):
         self._results: list[AnalysisResult] = []
         self._settings = QSettings(self._SETTINGS_ORG, self._SETTINGS_APP)
 
+        # Dir-Persistenz
+        self._last_open_dir: str = ""
+        self._last_export_dir: str = ""
+        self._home_dir: str = ""
+
         # Theme
         self._theme_manager = ThemeManager(ThemeMode.DARK)
 
@@ -101,6 +106,29 @@ class SpotilyzerApp(QMainWindow):
 
         # Pipeline im Hintergrund initialisieren
         QTimer.singleShot(100, self._init_pipeline)
+
+    # ── Dir-Persistenz ───────────────────────────────────────────────
+
+    def _effective_open_dir(self) -> str:
+        """Gibt das effektive Startverzeichnis zurück: home_dir > last_open_dir > ''."""
+        return self._home_dir or self._last_open_dir or ""
+
+    def set_home_dir(self, path: str) -> None:
+        """Setzt den konfigurierten Startordner und aktualisiert alle Panels."""
+        self._home_dir = path
+        self._settings.setValue("files/home_dir", path)
+        self._settings.sync()
+        start = Path(path) if path else (
+            Path(self._last_open_dir) if self._last_open_dir else Path.home()
+        )
+        self._file_panel.set_folder(start)
+        self._central.set_open_dir(self._effective_open_dir())
+
+    def _on_folder_changed(self, path: Path) -> None:
+        """FilePanel: Benutzer hat zu einem Ordner navigiert — Pfad merken."""
+        self._last_open_dir = str(path)
+        self._settings.setValue("files/last_open_dir", self._last_open_dir)
+        self._central.set_open_dir(self._effective_open_dir())
 
     # ── UI-Aufbau ────────────────────────────────────────────────────
 
@@ -264,6 +292,7 @@ class SpotilyzerApp(QMainWindow):
 
         # File Panel
         self._file_panel.files_selected.connect(self._on_files_selected)
+        self._file_panel.folder_changed.connect(self._on_folder_changed)
 
         # Highscore Panel
         self._highscore_panel.track_selected.connect(self._on_result_clicked)
@@ -275,6 +304,7 @@ class SpotilyzerApp(QMainWindow):
         self._settings_panel.mode_changed.connect(self._set_app_mode)
         self._settings_panel.theme_changed.connect(self._on_theme_changed)
         self._settings_panel.accent_changed.connect(self._on_accent_changed)
+        self._settings_panel.home_dir_changed.connect(self.set_home_dir)
 
     # ── Pipeline-Initialisierung ─────────────────────────────────────
 
@@ -532,9 +562,35 @@ class SpotilyzerApp(QMainWindow):
         self._apply_theme()
 
     def _apply_theme(self) -> None:
-        """Wendet das aktuelle Theme als QSS an."""
-        qss = self._theme_manager.generate_qss()
-        QApplication.instance().setStyleSheet(qss)
+        """Wendet das aktuelle Theme als QSS + QPalette an.
+
+        QPalette dient als Fallback für Widgets die kein Custom-QSS
+        vollständig respektieren (z.B. tabifizierte Dock-TabBars).
+        """
+        c = self._theme_manager.colors
+        app = QApplication.instance()
+
+        # QSS — primäre Styling-Quelle
+        app.setStyleSheet(self._theme_manager.generate_qss())
+
+        # QPalette — Fallback für platform-native Bereiche
+        palette = QPalette()
+        palette.setColor(QPalette.ColorRole.Window,          QColor(c.bg_primary))
+        palette.setColor(QPalette.ColorRole.WindowText,      QColor(c.text_normal))
+        palette.setColor(QPalette.ColorRole.Base,            QColor(c.bg_card))
+        palette.setColor(QPalette.ColorRole.AlternateBase,   QColor(c.bg_alt))
+        palette.setColor(QPalette.ColorRole.Text,            QColor(c.text_normal))
+        palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(c.text_muted))
+        palette.setColor(QPalette.ColorRole.Button,          QColor(c.bg_secondary))
+        palette.setColor(QPalette.ColorRole.ButtonText,      QColor(c.text_normal))
+        palette.setColor(QPalette.ColorRole.Highlight,       QColor(c.accent))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+        palette.setColor(QPalette.ColorRole.ToolTipBase,     QColor(c.bg_card))
+        palette.setColor(QPalette.ColorRole.ToolTipText,     QColor(c.text_normal))
+        palette.setColor(QPalette.ColorRole.Link,            QColor(c.accent))
+        palette.setColor(QPalette.ColorRole.Mid,             QColor(c.bg_secondary))
+        palette.setColor(QPalette.ColorRole.Dark,            QColor(c.border))
+        app.setPalette(palette)
 
     # ── Datei-Aktionen ───────────────────────────────────────────────
 
@@ -544,10 +600,13 @@ class SpotilyzerApp(QMainWindow):
         files, _ = QFileDialog.getOpenFileNames(
             self,
             "Audio-Dateien auswählen",
-            "",
+            self._effective_open_dir(),
             f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
         )
         if files:
+            self._last_open_dir = str(Path(files[0]).parent)
+            self._settings.setValue("files/last_open_dir", self._last_open_dir)
+            self._central.set_open_dir(self._effective_open_dir())
             self._on_files_selected(files)
 
     def _on_export(self) -> None:
@@ -565,10 +624,15 @@ class SpotilyzerApp(QMainWindow):
         defaults = self._settings_panel.get_export_defaults()
 
         # Export-Dialog
+        default_name = (
+            str(Path(self._last_export_dir) / "spotilyzer_export")
+            if self._last_export_dir
+            else "spotilyzer_export"
+        )
         path, selected_filter = QFileDialog.getSaveFileName(
             self,
             "Ergebnisse exportieren",
-            "spotilyzer_export",
+            default_name,
             "JSON (*.json);;CSV (*.csv);;Markdown (*.md);;Text (*.txt)",
         )
         if not path:
@@ -592,6 +656,8 @@ class SpotilyzerApp(QMainWindow):
                     export_path = export_path.with_suffix(".json")
                 self._exporter.to_json(self._results, export_path)
 
+            self._last_export_dir = str(export_path.parent)
+            self._settings.setValue("files/last_export_dir", self._last_export_dir)
             self._statusbar.showMessage(
                 f"\u2705 Export gespeichert: {export_path}", 5000
             )
@@ -679,6 +745,17 @@ class SpotilyzerApp(QMainWindow):
         if state:
             self.restoreState(state)
 
+        # Dir-Persistenz laden
+        self._last_open_dir = self._settings.value("files/last_open_dir", "")
+        self._last_export_dir = self._settings.value("files/last_export_dir", "")
+        self._home_dir = self._settings.value("files/home_dir", "")
+
+        # Panels mit gespeichertem Startordner initialisieren
+        start_dir = self._home_dir or self._last_open_dir
+        if start_dir:
+            self._file_panel.set_folder(Path(start_dir))
+        self._central.set_open_dir(self._effective_open_dir())
+
     # ── Window-Events ────────────────────────────────────────────────
 
     def closeEvent(self, event) -> None:
@@ -733,6 +810,9 @@ class SpotilyzerApp(QMainWindow):
 def run_app() -> int:
     """Startet die Spotilyzer-Anwendung."""
     app = QApplication.instance() or QApplication(sys.argv)
+    # Fusion-Style: Qt-eigene Implementierung, ignoriert platform-native Overrides
+    # und respektiert Custom-QSS vollständig (kein Windows-Theme-Bleed).
+    app.setStyle("Fusion")
     app.setApplicationName("Spotilyzer")
     app.setOrganizationName("Spotilyzer")
     app.setApplicationVersion(__version__)

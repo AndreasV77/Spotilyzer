@@ -10,7 +10,7 @@ from typing import Optional
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QLinearGradient
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QLinearGradient, QPalette
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 
@@ -33,10 +33,11 @@ class WaveformWidget(QWidget):
         self._waveform_data: Optional[np.ndarray] = None
         self._playback_position: float = 0.0  # 0.0 - 1.0
 
-        self._waveform_color = QColor("#22c55e")
-        self._bg_color = QColor("#1a1a1a")
-        self._position_color = QColor("#89b4fa")
-        self._center_line_color = QColor("#333333")
+        # Semantische Farben (theme-unabhängig)
+        self._waveform_color = QColor("#22c55e")   # Hit-Grün, immer
+        self._position_color = QColor("#89b4fa")   # Accent-Blau, immer
+        # Hintergrund: via QSS (WaveformWidget { background-color: ... })
+        # Mittellinie: semi-transparentes Grau, sichtbar auf hell und dunkel
 
         self.setMinimumHeight(60)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -66,17 +67,18 @@ class WaveformWidget(QWidget):
         rect = self.rect()
         w, h = rect.width(), rect.height()
 
-        # Hintergrund
-        painter.fillRect(rect, self._bg_color)
+        # Hintergrund: QSS (WaveformWidget { background-color }) übernimmt das Füllen
+        # via autoFillBackground — kein manuelles fillRect nötig
 
-        # Mittellinie
-        painter.setPen(QPen(self._center_line_color, 1))
+        # Mittellinie: semi-transparentes Grau (funktioniert auf hell + dunkel)
         center_y = h / 2
+        painter.setPen(QPen(QColor(128, 128, 128, 80), 1))
         painter.drawLine(0, int(center_y), w, int(center_y))
 
         if self._waveform_data is None or self._waveform_data.shape[1] == 0:
-            # Platzhalter-Text
-            painter.setPen(QPen(QColor("#555555")))
+            # Platzhalter-Text: Palette-Farbe für gedämpften Text
+            muted = self.palette().color(QPalette.ColorRole.PlaceholderText)
+            painter.setPen(QPen(muted))
             painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Keine Waveform")
             painter.end()
             return

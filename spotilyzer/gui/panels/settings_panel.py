@@ -26,6 +26,8 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QGroupBox,
+    QLineEdit,
+    QFileDialog,
 )
 from PySide6.QtCore import QSettings
 
@@ -50,6 +52,7 @@ class SettingsPanel(QDockWidget):
     mode_changed = Signal(object)    # AppMode
     theme_changed = Signal(object)   # ThemeMode
     accent_changed = Signal(str)     # Hex-Farbcode
+    home_dir_changed = Signal(str)   # Startordner (leer = deaktiviert)
 
     # QSettings Organisation
     _SETTINGS_ORG = "Spotilyzer"
@@ -201,6 +204,40 @@ class SettingsPanel(QDockWidget):
 
         scroll_layout.addWidget(export_group)
 
+        # ══════════════════════════════════════════════════════════════
+        # Dateien
+        # ══════════════════════════════════════════════════════════════
+        files_group = QGroupBox("\U0001f4c1 Dateien")
+        files_layout = QVBoxLayout(files_group)
+        files_layout.setSpacing(6)
+
+        home_dir_form = QFormLayout()
+        home_dir_form.setSpacing(4)
+
+        self._home_dir_edit = QLineEdit()
+        self._home_dir_edit.setReadOnly(True)
+        self._home_dir_edit.setPlaceholderText("Letzten Ordner verwenden...")
+        home_dir_form.addRow("Startordner:", self._home_dir_edit)
+        files_layout.addLayout(home_dir_form)
+
+        home_dir_btn_row = QHBoxLayout()
+        self._home_dir_browse_btn = QPushButton("Durchsuchen...")
+        self._home_dir_browse_btn.clicked.connect(self._on_home_dir_browse)
+        home_dir_btn_row.addWidget(self._home_dir_browse_btn)
+
+        self._home_dir_reset_btn = QPushButton("Zurücksetzen")
+        self._home_dir_reset_btn.clicked.connect(self._on_home_dir_reset)
+        home_dir_btn_row.addWidget(self._home_dir_reset_btn)
+        home_dir_btn_row.addStretch()
+        files_layout.addLayout(home_dir_btn_row)
+
+        home_dir_hint = QLabel("Leer = letzten verwendeten Ordner öffnen")
+        home_dir_hint.setObjectName("MutedLabel")
+        home_dir_hint.setWordWrap(True)
+        files_layout.addWidget(home_dir_hint)
+
+        scroll_layout.addWidget(files_group)
+
         # ── Stretch am Ende ──
         scroll_layout.addStretch()
 
@@ -247,6 +284,23 @@ class SettingsPanel(QDockWidget):
         default_color = "#89b4fa" if theme == ThemeMode.DARK else "#2563eb"
         self._update_accent_preview(default_color)
         self.accent_changed.emit(default_color)
+        self._save_settings()
+
+    def _on_home_dir_browse(self) -> None:
+        """Öffnet den Ordner-Auswahl-Dialog für den Startordner."""
+        current = self._home_dir_edit.text()
+        path = QFileDialog.getExistingDirectory(
+            self, "Startordner auswählen", current or ""
+        )
+        if path:
+            self._home_dir_edit.setText(path)
+            self.home_dir_changed.emit(path)
+            self._save_settings()
+
+    def _on_home_dir_reset(self) -> None:
+        """Löscht den konfigurierten Startordner."""
+        self._home_dir_edit.clear()
+        self.home_dir_changed.emit("")
         self._save_settings()
 
     def _update_accent_preview(self, hex_color: str) -> None:
@@ -312,6 +366,9 @@ class SettingsPanel(QDockWidget):
         self._settings.setValue("export/md", self._chk_md.isChecked())
         self._settings.setValue("export/txt", self._chk_txt.isChecked())
 
+        # Dateien
+        self._settings.setValue("files/home_dir", self._home_dir_edit.text())
+
         self._settings.sync()
 
     def _load_settings(self) -> None:
@@ -356,6 +413,11 @@ class SettingsPanel(QDockWidget):
         self._chk_txt.setChecked(
             self._settings.value("export/txt", False, type=bool)
         )
+
+        # Startordner
+        home_dir = self._settings.value("files/home_dir", "")
+        if home_dir:
+            self._home_dir_edit.setText(home_dir)
 
     # ── Hilfsfunktionen ──────────────────────────────────────────────
 
