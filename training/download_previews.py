@@ -31,10 +31,8 @@ from tqdm import tqdm
 # KONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-from config import TRACKS_CSV, PREVIEWS_DIR
-
-DEFAULT_INPUT = str(TRACKS_CSV)
-DEFAULT_OUTPUT = str(PREVIEWS_DIR)
+DEFAULT_INPUT = "scout_results_deezer/scouted_tracks.csv"
+DEFAULT_OUTPUT = "previews"
 DEEZER_API = "https://api.deezer.com"
 REQUEST_TIMEOUT = 15
 MAX_WORKERS = 4       # Reduziert wegen API-Calls pro Download
