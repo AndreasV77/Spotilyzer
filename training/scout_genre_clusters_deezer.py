@@ -493,10 +493,11 @@ def main():
         default=["none"],
         help="Länder-Charts einbeziehen (default: none)"
     )
+    from config import SCOUT_DIR as _SCOUT_DIR
     parser.add_argument(
         "--outdir",
-        default="scout_results_deezer",
-        help="Output-Verzeichnis (default: scout_results_deezer)"
+        default=str(_SCOUT_DIR),
+        help=f"Output-Verzeichnis (default: {_SCOUT_DIR})"
     )
     parser.add_argument(
         "--save-tracks",
