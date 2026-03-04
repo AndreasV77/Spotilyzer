@@ -33,10 +33,8 @@ from transformers import AutoModel, AutoProcessor
 # KONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-from config import PREVIEWS_DIR, EMBEDDINGS_DIR
-
-DEFAULT_INPUT = str(PREVIEWS_DIR)
-DEFAULT_OUTPUT = str(EMBEDDINGS_DIR)
+DEFAULT_INPUT = "previews"
+DEFAULT_OUTPUT = "embeddings"
 MODEL_NAME = "m-a-p/MERT-v1-95M"  # ~380MB, musik-optimiert
 
 # Audio-Konfiguration (MERT erwartet 24kHz)

@@ -1,234 +1,97 @@
-# Spotilyzer v2.0 — Hit/Mid/Flop Analyzer
+# Spotilyzer - Music Analysis Toolkit (Spotify Web API + Local MIR)
 
-ML-basiertes Audio-Analyse-Tool. Klassifiziert Tracks als **Hit / Mid / Flop** anhand von Mainstream-Kompatibilität.
+This mini toolkit gives you two complementary paths:
 
-**Pipeline:** Audiodatei → MERT-v1-95M Embeddings (768-dim) → XGBoost 3-Klassen-Klassifikator → GUI oder CLI
+A) **Spotify Web API (Spotipy)** — pull objective audio features for *reference/benchmark tracks* available on Spotify (danceability, energy, valence, tempo, loudness, etc.).  
+B) **Local MIR (librosa + pyloudnorm)** — extract comparable features from your **own audio files** (e.g., Tunee renders not on Spotify yet).
+
+Use A to understand mainstream trends and set target ranges. Use B to analyze your tracks and compare.
 
 ---
 
-## Schnellstart
+## 0) Setup
 
+### Python packages (create a venv if you like)
 ```bash
-# Venv erstellen & aktivieren (Python 3.12 empfohlen, min. 3.10)
-python -m venv .venv312
-.\.venv312\Scripts\Activate.ps1   # PowerShell
-
-# Paket installieren
-pip install -e .
-
-# GUI starten
-spotilyzer
-
-# CLI — einzelnen Track analysieren
-spotilyzer-cli "mein_track.mp3"
+pip install spotipy python-dotenv pandas numpy librosa pyloudnorm
 ```
 
-> **Erster Start:** MERT-v1-95M (~380 MB) wird automatisch von HuggingFace heruntergeladen
-> und in `~/.cache/huggingface/hub/` gecacht. Internetverbindung erforderlich.
+> If `librosa` installation complains about ffmpeg, install ffmpeg via your package manager.
+> On Windows, you can use e.g. `winget install Gyan.FFmpeg` or download from ffmpeg.org.
 
-> **Modell erforderlich:** `models/spotilyzer_model.joblib` muss vorhanden sein.
-> Entweder selbst trainieren (siehe [Training](#training)) oder eine fertige Version herunterladen.
+### Environment variables (recommended via `.env`)
+Copy `.env.example` to `.env` and fill in your **Spotify** credentials.
 
----
+- `SPOTIPY_CLIENT_ID` — from Spotify Developer Dashboard
+- `SPOTIPY_CLIENT_SECRET` — from Spotify Developer Dashboard
+- `SPOTIPY_REDIRECT_URI` — use explicit IP loopback, e.g. `http://127.0.0.1:8888/callback`
 
-## Features
-
-- **GUI** (PySide6): Drag & Drop, drei View-Modi (Simple / Balanced / Pro), Dark/Light-Theme
-- **CLI**: JSON, Minimal oder Default-Ausgabe; `--device cuda` für GPU
-- **13 Analyse-Felder** pro Track: Rating, Confidence, Hit/Mid/Flop-Wahrscheinlichkeiten + BPM, LUFS, Key, Format, Sample Rate, Bitrate, Kanäle, Dauer, Dateigröße
-- **Unterstützte Formate:** `.mp3` `.flac` `.wav` `.ogg` `.m4a` `.aac` `.wma`
-
----
-
-## Modell-Performance (aktuell)
-
-Trainiert auf **5.600 Samples** (Deezer 30s-Previews + Charts), 768-dim MERT-Embeddings.
-
-| Metrik            | Wert           |
-|-------------------|----------------|
-| Accuracy          | 71,0 %         |
-| Balanced Accuracy | 62,5 %         |
-| F1 macro          | 64,8 %         |
-| Hit Recall        | **93,6 %** ✓  |
-| Flop Recall       | 26,8 % (schwach)|
-| Mid Precision     | 94,1 % ✓      |
-
-**Interpretation:** ≥ 85 % Confidence = echtes Potential. < 60 % = unsicher, als Mid behandeln.
-Inferenz: ~0,53 s/Track auf GTX 1660 Ti.
+> Tip: For Windows PowerShell (temporary session):
+> ```powershell
+> $env:SPOTIPY_CLIENT_ID="YOUR_ID"
+> $env:SPOTIPY_CLIENT_SECRET="YOUR_SECRET"
+> $env:SPOTIPY_REDIRECT_URI="http://127.0.0.1:8888/callback"
+> ```
 
 ---
 
-## CLI-Referenz
-
+## 1) Test Spotify auth
 ```bash
-# Standard-Ausgabe (Tabelle)
-spotilyzer-cli "track.mp3"
-
-# JSON (maschinenlesbar)
-spotilyzer-cli "track.mp3" --style json
-
-# Minimal (nur Rating + Score)
-spotilyzer-cli "track.mp3" --style minimal
-
-# GPU verwenden
-spotilyzer-cli "track.mp3" --device cuda
-
-# Ohne Audio-Infos (schneller)
-spotilyzer-cli "track.mp3" --no-audio-info
+python3 spotify_auth_test.py
 ```
+It opens a browser for OAuth. After login, the script prints your display name and a token sanity check.
 
 ---
 
-## Setup (Entwicklung)
+## 2) Fetch Spotify audio features (batch)
 
+**Option 1: by Track IDs/URLs**  
+Fill `input_spotify_tracks.csv` with a column `track` that contains either Spotify track IDs or full URLs.
+
+Run:
 ```bash
-# Nur Core
-pip install -e .
-
-# Mit Training-Deps (XGBoost, scikit-learn, transformers, torchaudio …)
-pip install -e ".[training]"
-
-# Mit Dev-Deps (pyinstaller, pytest)
-pip install -e ".[dev]"
+python3 spotify_audio_features_batch.py --in ./input/input_spotify_tracks.csv --out ./output/spotify_features.csv
 ```
 
----
+**Option 2: by Search Queries (title + artist)**  
+Fill `input_spotify_search.csv` with columns `title` and `artist`.  
+The script finds the top Spotify match and fetches the features.
 
-## Training
-
-Das Training nutzt **Deezer** als Datenquelle (kostenlose, unauthentifizierte API mit `rank`-Feld
-als Popularitäts-Proxy). Spotify wurde im Februar 2026 als Quelle aufgegeben, da die API
-`/audio-features`, Track-Popularity und die Recommendations-Endpoint entfernt hat.
-
-### Trainingsdaten-Pipeline (in dieser Reihenfolge)
-
+Run:
 ```bash
-# 1. Tracks scouten (Deezer API → CSV mit Track-IDs und Ranks)
-python training/scout_genre_clusters_deezer.py --save-tracks
-
-# 2. Previews herunterladen (30s-MP3s von Deezer, ~2,2 GB)
-#    WICHTIG: Deezer Preview-URLs laufen nach ~15 Min ab — immer frisch holen!
-python training/download_previews.py
-
-# 3. MERT-Embeddings extrahieren (GPU empfohlen: <1s/Track, CPU: ~10-15s/Track)
-python training/extract_embeddings.py
-
-# 4. XGBoost-Modell trainieren
-python training/train_model.py
+python3 spotify_audio_features_batch.py --search ./input/input_spotify_search.csv --out ./output/spotify_features.csv
 ```
 
-**Ausgabe:** `models/spotilyzer_model.joblib` + `models/training_report.json`
+The output includes typical Spotify audio features (danceability, energy, valence, tempo, loudness, key, mode, time_signature, speechiness, instrumentalness, liveness, acousticness) plus Spotify popularity.
 
-### Externe Datenpfade (optional)
+---
 
-Standardmäßig landen alle Trainingsdaten im Projektordner. Für externe Festplatten oder
-andere Verzeichnisse:
+## 3) Analyze local audio files (your Tunee renders)
 
+Put WAV/MP3/FLAC files into `./local_audio/` (or anywhere). Then run:
 ```bash
-# Vorlage kopieren
-cp training/paths.env.example training/paths.env
-
-# Pfade in training/paths.env anpassen:
-# SPOTILYZER_PREVIEWS_DIR=E:/Spotilyzer-Data/previews
-# SPOTILYZER_EMBEDDINGS_DIR=E:/Spotilyzer-Data/embeddings
-# … etc.
-
-# Aktive Pfade prüfen
-python training/config.py
+python3 local_audio_features.py --in ./local_audio --out ./output/local_features.csv
 ```
 
-`training/paths.env` ist gitignored (lokale Maschinenpfade). CLI-Argumente der Skripte
-überschreiben die Pfade aus `paths.env` immer.
+This extracts:
+- duration (s), tempo (BPM), estimated key (rough), spectral centroid mean, RMS loudness (approx), integrated LUFS (pyloudnorm), short-time energy variance (as a proxy for dynamics).
 
-### 16 Genre-Cluster
-
-Extreme Metal · Gothic · Heavy Metal · Power/Symphonic · Modern Metal · Metalcore ·
-Crossover · Hard Rock · Mainstream Rock · Modern Rock · Classic/Southern Rock ·
-Alternative · Punk · Hardcore · Trance · House
-
-Zusätzlich: Länder-Charts (DE, US, UK, JP, GLOBAL) mit ~500 Extra-Tracks.
-
-### Rank-Schwellen (Deezer)
-
-| Rating | Deezer Rank        |
-|--------|--------------------|
-| Flop   | < 300.000          |
-| Mid    | 300.000 – 700.000  |
-| Hit    | > 700.000          |
+> Key detection is a rough estimation. For more robust results, consider Essentia’s key extractor.
 
 ---
 
-## Paketstruktur
+## 4) Compare & rank
 
-```
-spotilyzer/          # Installierbares Paket
-  core/
-    pipeline.py      # AnalysisPipeline — orchestriert Embedder + Predictor + AudioInfo
-    embedder.py      # MERTEmbedder (Singleton) — MERT-v1-95M, 768-dim
-    predictor.py     # SpotilyzerPredictor — XGBoost-Wrapper
-    audio_info.py    # BPM, LUFS, Key, Format, Waveform
-  cli/
-    analyze.py       # CLI-Einstiegspunkt
-  gui/
-    app.py           # SpotilyzerApp (QMainWindow)
-    central.py       # DropZone + Ergebnisliste + Stats
-    worker.py        # QThread-Worker für ML-Operationen
-    theme.py         # ThemeManager (Dark/Light + Accent-Farbe)
-    panels/          # Dock-Panels: file, highscore, history, tech, settings
-    widgets/         # DropZone, ResultCard, ConfidenceBar, Waveform
-  data/
-    models.py        # AnalysisResult, AudioInfo, Rating/AppMode/SortMode
-    persistence.py   # JSON/CSV/MD/TXT-Export, Auto-Save
-training/            # Nicht im EXE gebündelt
-  scout_genre_clusters_deezer.py
-  download_previews.py
-  extract_embeddings.py
-  train_model.py
-  config.py          # Pfad-Konfiguration (liest paths.env)
-  paths.env.example  # Vorlage für externe Datenpfade
-models/              # spotilyzer_model.joblib + training_report.json
-resources/           # GUI-Assets
-legacy/              # Archivierte Spotify-API-Skripte (nur Referenz)
-```
+Use `compare_and_rank.ipynb` (Jupyter) or your own spreadsheet:
+- Load `spotify_features.csv` as **reference** (mainstream targets per genre).
+- Load `local_features.csv` as **candidates**.
+- Create a simple score: e.g. z-score distance to target ranges + bonus for hook density (if annotated) + penalty for extreme loudness, etc.
+
+You can iterate weights per round (Round 1 → Round 2 → Round 3).
 
 ---
 
-## Windows EXE bauen
-
-```bash
-pip install -e ".[dev]"
-pyinstaller spotilyzer.spec
-
-# CUDA-Libs entfernen (~1,5 GB Einsparung)
-python strip_cuda.py
-```
-
-MERT (~380 MB) wird **nicht** gebündelt — wird beim ersten Start heruntergeladen.
-Gesamtgröße nach Strip: ~3 GB.
-
----
-
-## Bekannte Einschränkungen
-
-- **App-Icon:** `resources/spotilyzer.ico` fehlt noch — Fenster zeigt Standard-Qt-Icon
-- **Drag & Drop + Admin-Shell (Windows):** D&D aus Explorer funktioniert nicht wenn die App
-  in einer elevated Shell läuft (Windows UIPI). Lösung: App ohne Admin starten oder
-  Datei-Dialog verwenden
-- **Flop-Recall schwach (26,8 %):** Mehr Flop-Trainingssamples benötigt
-
----
-
-## Roadmap
-
-**Kurzfristig**
-- App-Icon erstellen (`resources/spotilyzer.ico`)
-- Flop-Recall verbessern (mehr Flop-Samples)
-- Modell-Download im GUI (statt lokales Training)
-
-**Mittelfristig**
-- "Klingt wie …" — Ähnlichkeitssuche im Embedding-Raum
-- Genre-Klassifikation (zweites Modell)
-- Genre-Cluster-Editor im GUI (PRO-Modus)
-
-**Langfristig**
-- Genre-spezifische Modelle (eines pro Cluster)
+## Notes
+- Spotify features are **catalog-based**. They won’t exist for private/unreleased tracks. That’s why local MIR is essential.
+- For better genre priors, you can cluster Spotify reference tracks and compute **centroids**; then score your tracks by distance to the centroid of your target cluster.
+- If you prefer not to install `librosa`, you can still do LUFS-only analysis via `pyloudnorm` (requires raw audio time series), but you’ll miss tempo/key.

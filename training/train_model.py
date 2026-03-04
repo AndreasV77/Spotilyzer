@@ -40,11 +40,9 @@ import joblib
 # KONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-from config import EMBEDDINGS_DIR, TRACKS_CSV, MODELS_DIR
-
-DEFAULT_EMBEDDINGS_DIR = str(EMBEDDINGS_DIR)
-DEFAULT_TRACKS_CSV = str(TRACKS_CSV)
-DEFAULT_OUTPUT_DIR = str(MODELS_DIR)
+DEFAULT_EMBEDDINGS_DIR = "embeddings"
+DEFAULT_TRACKS_CSV = "scout_results_deezer/scouted_tracks.csv"
+DEFAULT_OUTPUT_DIR = "models"
 
 # Rank-Schwellen für Hit/Mid/Flop (aus Scouting-Script)
 RANK_THRESHOLDS = {"flop": 300000, "mid": 700000}
