@@ -158,8 +158,14 @@ class CentralWidget(QWidget):
         self.refresh_display()
 
     def add_result(self, result: AnalysisResult) -> None:
-        """Fügt ein einzelnes Ergebnis hinzu."""
-        self._results.append(result)
+        """Fügt ein einzelnes Ergebnis hinzu.
+
+        Prüft per Identität ob result bereits enthalten ist. Das verhindert
+        Duplikate wenn app.py und central._results dieselbe Listeninstanz
+        teilen (nach _load_saved_results → set_results).
+        """
+        if result not in self._results:
+            self._results.append(result)
         self.refresh_display()
 
     def clear_results(self) -> None:

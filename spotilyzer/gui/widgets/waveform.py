@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 from PySide6.QtCore import Qt, Signal, QPointF
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QLinearGradient, QPalette
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QStyle, QStyleOption, QWidget, QSizePolicy
 
 
 class WaveformWidget(QWidget):
@@ -38,6 +38,9 @@ class WaveformWidget(QWidget):
         self._position_color = QColor("#89b4fa")   # Accent-Blau, immer
         # Hintergrund: via QSS (WaveformWidget { background-color: ... })
         # Mittellinie: semi-transparentes Grau, sichtbar auf hell und dunkel
+
+        # WA_StyledBackground: macht QSS background-color für custom QWidget sichtbar
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.setMinimumHeight(60)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -67,8 +70,13 @@ class WaveformWidget(QWidget):
         rect = self.rect()
         w, h = rect.width(), rect.height()
 
-        # Hintergrund: QSS (WaveformWidget { background-color }) übernimmt das Füllen
-        # via autoFillBackground — kein manuelles fillRect nötig
+        # Hintergrund füllen: Style-Primitive respektiert QSS background-color.
+        # Ohne diesen Aufruf wird background-color nie gezeichnet, da wir
+        # super().paintEvent() nicht aufrufen — das führt zu Pixel-Artefakten
+        # bei Theme-Wechsel und Resize.
+        opt = QStyleOption()
+        opt.initFrom(self)
+        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
 
         # Mittellinie: semi-transparentes Grau (funktioniert auf hell + dunkel)
         center_y = h / 2

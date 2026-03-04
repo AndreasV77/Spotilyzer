@@ -11,6 +11,9 @@ build/
 .env
 .cache/
 
+# Training: lokale Pfad-Konfiguration (Vorlage: training/paths.env.example)
+training/paths.env
+
 # Output-Artefakte
 output/
 
