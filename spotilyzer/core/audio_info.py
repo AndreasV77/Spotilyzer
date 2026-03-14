@@ -172,32 +172,39 @@ def _estimate_bpm(waveform: torch.Tensor, sample_rate: int) -> Optional[float]:
 
 def _estimate_lufs(waveform: torch.Tensor, sample_rate: int) -> Optional[float]:
     """
-    Schätzt Integrated LUFS (vereinfachte EBU R128 Implementierung).
+    Misst Integrated LUFS nach EBU R128 via pyloudnorm.
 
-    Berechnet den RMS-Pegel und konvertiert in LUFS-Skala.
-    Volle EBU R128 Implementierung würde K-Weighting und Gating erfordern.
+    Volle Implementierung: K-Weighting + 400ms-Block-Gating.
+    Fallback auf RMS-Approximation falls pyloudnorm nicht verfügbar.
     """
     try:
-        # RMS über den gesamten Track
-        rms = torch.sqrt(torch.mean(waveform ** 2))
+        import pyloudnorm as pyln
 
-        if rms < 1e-10:
-            return -70.0  # Stille
+        # pyloudnorm erwartet numpy float64, shape: (samples,) oder (samples, channels)
+        data = waveform.numpy().astype(np.float64)
+        if data.ndim == 1:
+            data = data[:, np.newaxis]  # (samples, 1)
+        else:
+            data = data.T  # (samples, channels) — waveform ist (channels, samples)
 
-        # dBFS
-        db_fs = 20 * math.log10(float(rms))
+        meter = pyln.Meter(sample_rate)  # EBU R128
+        lufs = meter.integrated_loudness(data)
 
-        # Approximation: LUFS ≈ dBFS für normalisiertes Audio
-        # (Echte LUFS braucht K-Weighting Filter, dies ist eine Annäherung)
-        lufs = db_fs
+        # pyloudnorm gibt -inf für Stille zurück
+        if not np.isfinite(lufs):
+            return -70.0
 
-        # Plausibilitätscheck
-        if lufs < -70:
-            lufs = -70.0
-
-        return round(lufs, 1)
+        return round(float(lufs), 1)
     except Exception:
-        return None
+        # Fallback: RMS → dBFS
+        try:
+            rms = float(torch.sqrt(torch.mean(waveform ** 2)))
+            if rms < 1e-10:
+                return -70.0
+            lufs = max(20 * math.log10(rms), -70.0)
+            return round(lufs, 1)
+        except Exception:
+            return None
 
 
 def _estimate_key(waveform: torch.Tensor, sample_rate: int) -> Optional[str]:
