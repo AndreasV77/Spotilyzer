@@ -36,7 +36,7 @@ class DropZone(QFrame):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._label = QLabel(
-            "\U0001f4c2 Audio-Dateien hierher ziehen\noder klicken zum Auswählen"
+            "Audio-Dateien hierher ziehen\noder klicken zum Auswählen"
         )
         self._label.setObjectName("DropZoneLabel")
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -51,11 +51,11 @@ class DropZone(QFrame):
     def set_loading(self, loading: bool) -> None:
         """Zeigt Lade-Status an."""
         if loading:
-            self._label.setText("\u23f3 Modell wird geladen...")
+            self._label.setText("Modell wird geladen...")
             self.setEnabled(False)
         else:
             self._label.setText(
-                "\U0001f4c2 Audio-Dateien hierher ziehen\noder klicken zum Auswählen"
+                "Audio-Dateien hierher ziehen\noder klicken zum Auswählen"
             )
             self.setEnabled(True)
 

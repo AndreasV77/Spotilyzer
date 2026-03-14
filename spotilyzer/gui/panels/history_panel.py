@@ -49,11 +49,7 @@ class HistoryPanel(QDockWidget):
         "flop": QColor("#ef4444"),
     }
 
-    RATING_EMOJIS = {
-        "hit": "\U0001f525",
-        "mid": "\u2796",
-        "flop": "\U0001f480",
-    }
+    RATING_LABELS = {"hit": "HIT", "mid": "MID", "flop": "FLOP"}
 
     def __init__(self, parent=None):
         super().__init__("Verlauf", parent)
@@ -79,7 +75,7 @@ class HistoryPanel(QDockWidget):
         # ── Header ──
         header = QHBoxLayout()
 
-        title = QLabel("\U0001f4dc Verlauf")
+        title = QLabel("Verlauf")
         title.setStyleSheet("font-weight: bold; font-size: 14px;")
         header.addWidget(title)
 
@@ -177,14 +173,13 @@ class HistoryPanel(QDockWidget):
             item = QListWidgetItem(text)
             item.setForeground(QColor("#ef4444"))  # Flop-Rot: leserlich in dark + light
         else:
-            emoji = self.RATING_EMOJIS.get(result.rating, "?")
-            rating_text = result.rating.upper() if result.rating else "?"
+            rating_text = self.RATING_LABELS.get(result.rating, "?")
             hit_pct = result.probabilities.get("hit", 0.0)
 
-            # Format: "Timestamp  Emoji RATING  Dateiname  (Hit%)"
+            # Format: "Timestamp  RATING  Dateiname  (Hit%)"
             text = (
                 f"{result.timestamp[:16]}  "
-                f"{emoji} {rating_text}  "
+                f"{rating_text}  "
                 f"{result.file}  "
                 f"({hit_pct:.0%})"
             )

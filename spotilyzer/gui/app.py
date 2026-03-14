@@ -192,7 +192,7 @@ class SpotilyzerApp(QMainWindow):
         self.addToolBar(self._toolbar)
 
         # Ordner öffnen
-        self._action_open = QAction("\U0001f4c2 Öffnen", self)
+        self._action_open = QAction("Öffnen", self)
         self._action_open.setShortcut(QKeySequence.StandardKey.Open)
         self._action_open.setToolTip("Audio-Dateien zum Analysieren auswählen")
         self._action_open.triggered.connect(self._on_open_files)
@@ -201,13 +201,13 @@ class SpotilyzerApp(QMainWindow):
         self._toolbar.addSeparator()
 
         # Export
-        self._action_export = QAction("\U0001f4be Export", self)
+        self._action_export = QAction("Export", self)
         self._action_export.setToolTip("Ergebnisse exportieren")
         self._action_export.triggered.connect(self._on_export)
         self._toolbar.addAction(self._action_export)
 
         # Clear
-        self._action_clear = QAction("\U0001f5d1\ufe0f Clear", self)
+        self._action_clear = QAction("Clear", self)
         self._action_clear.setToolTip("Alle Ergebnisse löschen")
         self._action_clear.triggered.connect(self._on_clear)
         self._toolbar.addAction(self._action_clear)
@@ -215,14 +215,14 @@ class SpotilyzerApp(QMainWindow):
         self._toolbar.addSeparator()
 
         # View-Modi
-        self._action_simple = QAction("\U0001f7e2 Simpel", self)
+        self._action_simple = QAction("Simpel", self)
         self._action_simple.setToolTip("Einfache Ansicht — nur Rating + Ergebnisse")
         self._action_simple.triggered.connect(
             lambda: self._set_app_mode(AppMode.SIMPLE)
         )
         self._toolbar.addAction(self._action_simple)
 
-        self._action_balanced = QAction("\U0001f535 Ausgewogen", self)
+        self._action_balanced = QAction("Ausgewogen", self)
         self._action_balanced.setToolTip(
             "Ausgewogene Ansicht — Rating + Audio-Info"
         )
@@ -231,7 +231,7 @@ class SpotilyzerApp(QMainWindow):
         )
         self._toolbar.addAction(self._action_balanced)
 
-        self._action_pro = QAction("\U0001f534 Profi", self)
+        self._action_pro = QAction("Profi", self)
         self._action_pro.setToolTip("Profi-Ansicht — alle Felder + Dock-Panels")
         self._action_pro.triggered.connect(
             lambda: self._set_app_mode(AppMode.PRO)
@@ -329,7 +329,7 @@ class SpotilyzerApp(QMainWindow):
             )
             return
 
-        self._central.set_status("\u2728 Initialisiere ML-Pipeline...")
+        self._central.set_status("Initialisiere ML-Pipeline...")
         self._settings_panel.set_model_path(str(model_path))
 
         self._init_worker = PipelineInitWorker(model_path, parent=self)
@@ -357,7 +357,7 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_init_progress(self, message: str) -> None:
         """Pipeline-Initialisierung: Status-Update."""
-        self._central.set_status(f"\u2728 {message}")
+        self._central.set_status(message)
         self._statusbar.showMessage(message, 5000)
 
     def _on_pipeline_ready(self, pipeline) -> None:
@@ -438,7 +438,7 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_analysis_progress(self, message: str) -> None:
         """Analyse: Status-Update."""
-        self._central.set_status(f"\u23f3 {message}")
+        self._central.set_status(message)
         self._statusbar.showMessage(message, 3000)
 
     def _on_result_ready(self, result: AnalysisResult) -> None:
@@ -477,7 +477,7 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_analysis_error(self, error_msg: str) -> None:
         """Analyse-Fehler für einzelnen Track."""
-        self._statusbar.showMessage(f"\u26a0\ufe0f {error_msg}", 5000)
+        self._statusbar.showMessage(f"Fehler: {error_msg}", 5000)
 
     # ── Waveform-Loading ─────────────────────────────────────────────
 
@@ -701,7 +701,7 @@ class SpotilyzerApp(QMainWindow):
         self._highscore_panel.set_results([])
         self._history_panel.set_results([])
         self._tech_panel.clear()
-        self._central.set_status("\U0001f5d1\ufe0f Ergebnisse gelöscht")
+        self._central.set_status("Ergebnisse gelöscht")
 
     # ── Persistenz ───────────────────────────────────────────────────
 
@@ -806,7 +806,7 @@ class SpotilyzerApp(QMainWindow):
         QMessageBox.about(
             self,
             "Über Spotilyzer",
-            f"\U0001f3b5 Spotilyzer v{__version__}\n\n"
+            f"Spotilyzer v{__version__}\n\n"
             f"Hit/Mid/Flop Analyzer\n"
             f"Bewertet die Mainstream-Kompatibilität von Audio-Tracks.\n\n"
             f"ML-Pipeline: MERT-v1-95M + XGBoost\n"
