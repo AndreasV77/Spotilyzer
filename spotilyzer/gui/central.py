@@ -119,8 +119,9 @@ class CentralWidget(QWidget):
         )
 
         self._results_container = QWidget()
+        self._results_container.setObjectName("ResultsContainer")
         self._results_container.setAutoFillBackground(False)
-        self._results_container.setStyleSheet("background-color: transparent;")
+        self._results_container.setStyleSheet("#ResultsContainer { background-color: transparent; }")
         self._results_layout = QVBoxLayout(self._results_container)
         self._results_layout.setContentsMargins(0, 0, 0, 0)
         self._results_layout.setSpacing(4)
