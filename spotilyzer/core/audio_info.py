@@ -155,6 +155,12 @@ def _estimate_bpm(waveform: torch.Tensor, sample_rate: int) -> Optional[float]:
 
         if best_lag > 0:
             bpm = float(fps * 60 / best_lag)
+            # Oktavfehler-Korrektur: >150 BPM auf halbe Periode prüfen
+            # (Autocorrelation findet oft doppeltes Tempo bei langsamen Tracks)
+            if bpm > 150:
+                half = bpm / 2
+                if 40 <= half <= 150:
+                    bpm = half
             # Plausibilitätscheck
             if 40 <= bpm <= 240:
                 return round(bpm, 1)
