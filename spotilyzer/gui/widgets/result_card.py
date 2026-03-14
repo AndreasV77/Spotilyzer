@@ -30,15 +30,18 @@ class ResultCard(QFrame):
     RATING_COLORS = {"hit": "#22c55e", "mid": "#eab308", "flop": "#ef4444"}
     RATING_EMOJIS = {"hit": "\U0001f525", "mid": "\u2796", "flop": "\U0001f480"}
 
-    # Feste Kartenhöhen pro Modus (QSS padding:10px + border:1px + Inhalt)
+    # Feste Kartenhöhen pro Modus
+    # SIMPLE:   padding(24) + border(2) + header(~24) + spacing(6) + bar(26) = 82
+    # BALANCED: + spacing(6) + audio_info(~18) = 106  → +CLAP-Zeile Reserve → 120
+    # PRO:      + CLAP-Zeile als 4. Zeile → 128
     CARD_HEIGHTS = {
-        AppMode.SIMPLE: 68,     # padding(20) + border(2) + header(~22) + spacing(4) + bar(22)
-        AppMode.BALANCED: 88,   # + spacing(4) + audio_info(~16)
-        AppMode.PRO: 88,        # gleich wie BALANCED (Info einzeilig mit Ellipsis)
+        AppMode.SIMPLE:   88,
+        AppMode.BALANCED: 120,
+        AppMode.PRO:      128,
     }
 
     # Kartenhöhe + Spacing ergibt die Rasterzeile
-    CARD_SPACING = 4
+    CARD_SPACING = 6
 
     def __init__(
         self,
@@ -64,8 +67,8 @@ class ResultCard(QFrame):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
 
         if self.result.is_error:
             self._setup_error_ui(layout)
@@ -98,16 +101,16 @@ class ResultCard(QFrame):
         medal = MEDALS.get(self.rank, "")
         rank_text = medal if medal else f"#{self.rank + 1}"
         rank_label = QLabel(rank_text)
-        rank_label.setFixedWidth(28)
+        rank_label.setFixedWidth(34)
         rank_label.setObjectName("MedalLabel" if medal else "RankLabel")
         header.addWidget(rank_label)
 
         # Dateiname
         display_name = self.result.file
-        if len(display_name) > 50:
-            display_name = display_name[:47] + "..."
+        if len(display_name) > 70:
+            display_name = display_name[:67] + "..."
         name_label = QLabel(display_name)
-        name_label.setStyleSheet("font-weight: bold; font-size: 13px;")
+        name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         name_label.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
@@ -120,8 +123,8 @@ class ResultCard(QFrame):
         confidence = self.result.probabilities.get(rating, self.result.confidence)
         rating_label = QLabel(f" {emoji} {rating.upper()} ({confidence:.0%}) ")
         rating_label.setStyleSheet(
-            f"color: {color}; font-weight: bold; font-size: 12px; "
-            f"background-color: {color}18; border-radius: 4px; padding: 2px 6px;"
+            f"color: {color}; font-weight: bold; font-size: 13px; "
+            f"background-color: {color}18; border-radius: 4px; padding: 3px 8px;"
         )
         rating_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -169,8 +172,8 @@ class ResultCard(QFrame):
                 info_parts.append(f"E:{ai.energy:.2f}")
 
         info_text = " \u2502 ".join(info_parts)
-        if len(info_text) > 100:
-            info_text = info_text[:97] + "..."
+        if len(info_text) > 130:
+            info_text = info_text[:127] + "..."
         info_label = QLabel(info_text)
         info_label.setObjectName("MutedLabel")
         info_label.setWordWrap(False)

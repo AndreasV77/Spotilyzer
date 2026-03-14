@@ -46,8 +46,8 @@ class CentralWidget(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
         # ── Titel ──
         self._title_label = QLabel("\U0001f3b5 SPOTILYZER")
@@ -86,7 +86,7 @@ class CentralWidget(QWidget):
             (SortMode.NAME, ("Name", "\U0001f4dd")),
         ]:
             btn = QPushButton(f"{icon} {text}")
-            btn.setFixedHeight(28)
+            btn.setFixedHeight(32)
             btn.clicked.connect(lambda checked, m=mode: self.set_sort_mode(m))
             toolbar.addWidget(btn)
             self._sort_buttons[mode] = btn
@@ -94,7 +94,7 @@ class CentralWidget(QWidget):
         toolbar.addStretch()
 
         self._clear_btn = QPushButton("\U0001f5d1\ufe0f Clear")
-        self._clear_btn.setFixedHeight(28)
+        self._clear_btn.setFixedHeight(32)
         self._clear_btn.clicked.connect(self._on_clear)
         toolbar.addWidget(self._clear_btn)
 
@@ -203,7 +203,7 @@ class CentralWidget(QWidget):
 
         # DropZone kollabieren wenn Ergebnisse vorhanden
         if has_results:
-            self._dropzone.setMaximumHeight(50)
+            self._dropzone.setMaximumHeight(60)
             self._dropzone.set_status(
                 "\U0001f4c2 + Weitere Dateien ziehen oder klicken"
             )

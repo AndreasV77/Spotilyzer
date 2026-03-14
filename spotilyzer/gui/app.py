@@ -66,8 +66,8 @@ class SpotilyzerApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle(f"Spotilyzer v{__version__}")
-        self.setMinimumSize(900, 600)
-        self.resize(1280, 800)
+        self.setMinimumSize(1100, 720)
+        self.resize(1600, 960)
 
         # State
         self._pipeline = None  # wird async geladen
@@ -171,6 +171,17 @@ class SpotilyzerApp(QMainWindow):
         self._highscore_panel.raise_()
         # Technik als aktiven Tab setzen (rechts)
         self._tech_panel.raise_()
+
+        # Initiale Dock-Größen (nur beim ersten Start, danach via QSettings)
+        self.resizeDocks(
+            [self._file_panel], [260], Qt.Orientation.Horizontal
+        )
+        self.resizeDocks(
+            [self._tech_panel], [340], Qt.Orientation.Horizontal
+        )
+        self.resizeDocks(
+            [self._highscore_panel], [280], Qt.Orientation.Vertical
+        )
 
     def _create_toolbar(self) -> None:
         """Erstellt die Toolbar."""
