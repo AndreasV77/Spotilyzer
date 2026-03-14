@@ -29,6 +29,12 @@ from spotilyzer.data.models import CLAPResult
 # Standard-Tag-Sets (konfigurierbar, nicht hardcoded)
 DEFAULT_TAG_SETS: dict[str, list[str]] = {
     "genre": [
+        "gothic metal",
+        "doom metal",
+        "symphonic metal",
+        "black metal",
+        "death metal",
+        "metalcore",
         "metal",
         "hard rock",
         "rock",
