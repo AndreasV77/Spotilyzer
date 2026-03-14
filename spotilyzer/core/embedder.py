@@ -18,6 +18,7 @@ import torchaudio
 from transformers import AutoModel, AutoProcessor
 
 from spotilyzer import MERT_MODEL_NAME, TARGET_SAMPLE_RATE, MAX_AUDIO_LENGTH_SEC
+from spotilyzer.core._audio_loader import load_audio_file
 
 
 class MERTEmbedder:
@@ -116,12 +117,9 @@ class MERTEmbedder:
             RuntimeError: Wenn die Datei nicht geladen werden kann.
         """
         try:
-            try:
-                # soundfile first: avoids torchcodec backend in torchaudio >=2.5
-                waveform, sample_rate = torchaudio.load(str(filepath), backend="soundfile")
-            except Exception:
-                # fallback for formats soundfile doesn't support
-                waveform, sample_rate = torchaudio.load(str(filepath))
+            waveform, sample_rate = load_audio_file(filepath)
+        except RuntimeError:
+            raise
         except Exception as e:
             raise RuntimeError(f"Audio laden fehlgeschlagen: {filepath.name} - {e}")
 
