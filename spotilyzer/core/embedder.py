@@ -116,7 +116,13 @@ class MERTEmbedder:
             RuntimeError: Wenn die Datei nicht geladen werden kann.
         """
         try:
-            waveform, sample_rate = torchaudio.load(filepath)
+            try:
+                waveform, sample_rate = torchaudio.load(filepath)
+            except RuntimeError as _e:
+                if "TorchCodec" in str(_e) or "torchcodec" in str(_e):
+                    waveform, sample_rate = torchaudio.load(str(filepath), backend="soundfile")
+                else:
+                    raise
         except Exception as e:
             raise RuntimeError(f"Audio laden fehlgeschlagen: {filepath.name} - {e}")
 
