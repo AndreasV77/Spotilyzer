@@ -118,8 +118,8 @@ class MERTEmbedder:
         try:
             try:
                 waveform, sample_rate = torchaudio.load(filepath)
-            except RuntimeError as _e:
-                if "TorchCodec" in str(_e) or "torchcodec" in str(_e):
+            except Exception as _e:
+                if "torchcodec" in str(_e).lower() or "torchcodec" in type(_e).__name__.lower():
                     waveform, sample_rate = torchaudio.load(str(filepath), backend="soundfile")
                 else:
                     raise
