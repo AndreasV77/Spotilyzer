@@ -33,17 +33,17 @@ class ResultCard(QFrame):
     RANK_COLORS = {0: "#FFD700", 1: "#B8B8B8", 2: "#CD7F32"}  # Gold, Silber, Bronze
 
     # Feste Kartenhöhen pro Modus
-    # SIMPLE:   padding(24) + border(2) + header(~24) + spacing(6) + bar(26) = 82
-    # BALANCED: + spacing(6) + audio_info(~18) = 106  → +CLAP-Zeile Reserve → 120
-    # PRO:      + CLAP-Zeile als 4. Zeile → 128
+    # SIMPLE:   margins(12) + header(~22) + spacing(4) + bar(20) = 58  → 68
+    # BALANCED: + spacing(4) + audio_info(~16) = 78                    → 88
+    # PRO:      + spacing(4) + CLAP-Zeile(~16) = 98                    → 104
     CARD_HEIGHTS = {
-        AppMode.SIMPLE:   88,
-        AppMode.BALANCED: 120,
-        AppMode.PRO:      128,
+        AppMode.SIMPLE:   68,
+        AppMode.BALANCED: 88,
+        AppMode.PRO:      104,
     }
 
     # Kartenhöhe + Spacing ergibt die Rasterzeile
-    CARD_SPACING = 6
+    CARD_SPACING = 4
 
     def __init__(
         self,
@@ -69,8 +69,8 @@ class ResultCard(QFrame):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(6)
+        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setSpacing(4)
 
         if self.result.is_error:
             self._setup_error_ui(layout)
@@ -117,7 +117,7 @@ class ResultCard(QFrame):
         if len(display_name) > 70:
             display_name = display_name[:67] + "..."
         name_label = QLabel(display_name)
-        name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        name_label.setStyleSheet("font-weight: bold; font-size: 13px;")
         name_label.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
@@ -130,8 +130,8 @@ class ResultCard(QFrame):
         confidence = self.result.probabilities.get(rating, self.result.confidence)
         rating_label = QLabel(f" {rating.upper()} ({confidence:.0%}) ")
         rating_label.setStyleSheet(
-            f"color: {color}; font-weight: bold; font-size: 13px; "
-            f"background-color: {color}18; border-radius: 4px; padding: 3px 8px;"
+            f"color: {color}; font-weight: bold; font-size: 12px; "
+            f"background-color: {color}18; border-radius: 4px; padding: 2px 6px;"
         )
         rating_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
