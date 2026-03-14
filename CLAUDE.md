@@ -125,6 +125,16 @@ spotilyzer_gui.py        # legacy Tkinter GUI (predates PySide6 rewrite)
 
 **Packaging**: PyInstaller `--onedir` via `spotilyzer.spec`. MERT and CLAP (~380 MB / ~776 MB) are NOT bundled — downloaded on first run. After build, `strip_cuda.py` removes unused CUDA DLLs saving ~1.5 GB. Total bundled size ~3 GB.
 
+## Intended Usage Profile
+
+**Batch size**: typically 1–10 tracks per session, rarely more. No streaming/bulk-pipeline requirements.
+**Latency tolerance**: a few seconds per track is fine; throughput optimization is low priority.
+**Training**: runs overnight unattended — hours-long GPU jobs are acceptable.
+**Hardware target**: Windows PC with GTX 1660 Ti (6 GB VRAM), 16–32 GB RAM. CPU-only fallback must work but can be slower.
+**Model upgrades** (e.g., MERT-330M): justified by quality gains, not speed — retrain in SpotilyzerTraining, swap `.joblib`.
+
+This profile means: **quality over speed**, **correctness over throughput**, **single-user desktop app**.
+
 ## Supported Audio Formats
 
 `.mp3`, `.flac`, `.wav`, `.ogg`, `.m4a`, `.aac`, `.wma`
@@ -214,6 +224,7 @@ Country charts (DE, US, UK, JP, GLOBAL) add ~500 extra tracks to training data.
 - Fix BPM octave error (halve if > configurable threshold, e.g., 160 BPM for slow genres)
 
 **Medium-term:**
+- MERT-v1-330M upgrade: switch embedder to `m-a-p/MERT-v1-330M` (1024-dim), retrain XGBoost in SpotilyzerTraining (overnight GPU job), swap `.joblib` — expected quality gain on ambiguous tracks
 - "Sounds like..." — similarity search in embedding space
 - Genre classification — second model for cluster assignment
 - In-app genre cluster editor + scouting trigger (PRO mode)
