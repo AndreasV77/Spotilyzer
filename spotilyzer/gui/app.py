@@ -513,6 +513,10 @@ class SpotilyzerApp(QMainWindow):
         self._tech_panel.show()
         self._tech_panel.raise_()
 
+        # Waveform nachladen falls nicht enthalten (z. B. nach JSON-Import)
+        if result._waveform is None and not result.is_error:
+            self._start_waveform_load(result)
+
     # ── View-Modi ────────────────────────────────────────────────────
 
     def _set_app_mode(self, mode: AppMode) -> None:

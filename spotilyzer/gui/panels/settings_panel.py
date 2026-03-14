@@ -86,8 +86,9 @@ class SettingsPanel(QDockWidget):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         scroll_content = QWidget()
+        scroll_content.setObjectName("SettingsScrollContent")
         scroll_content.setAutoFillBackground(False)
-        scroll_content.setStyleSheet("background-color: transparent;")
+        scroll_content.setStyleSheet("#SettingsScrollContent { background-color: transparent; }")
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(10)
@@ -145,7 +146,7 @@ class SettingsPanel(QDockWidget):
         accent_row.addStretch()
 
         self._accent_reset_btn = QPushButton("Reset")
-        self._accent_reset_btn.setFixedWidth(50)
+        self._accent_reset_btn.setFixedWidth(72)
         self._accent_reset_btn.setToolTip("Accent-Farbe auf Standard zurücksetzen")
         self._accent_reset_btn.clicked.connect(self._on_accent_reset)
         accent_row.addWidget(self._accent_reset_btn)
