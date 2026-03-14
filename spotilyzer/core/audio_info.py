@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torchaudio
 
+from spotilyzer.core._audio_loader import load_audio_file
 from spotilyzer.data.models import AudioInfo
 
 
@@ -65,10 +66,7 @@ def extract_audio_info(filepath: Path) -> AudioInfo:
     energy = None
 
     try:
-        try:
-            waveform, sr = torchaudio.load(str(path), backend="soundfile")
-        except Exception:
-            waveform, sr = torchaudio.load(str(path))
+        waveform, sr = load_audio_file(path)
 
         # Mono für Analyse
         if waveform.shape[0] > 1:
@@ -304,10 +302,7 @@ def extract_waveform_display(
         oder None bei Fehler.
     """
     try:
-        try:
-            waveform, sr = torchaudio.load(str(filepath), backend="soundfile")
-        except Exception:
-            waveform, sr = torchaudio.load(str(filepath))
+        waveform, sr = load_audio_file(filepath)
 
         # Mono
         if waveform.shape[0] > 1:

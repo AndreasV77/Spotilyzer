@@ -22,6 +22,7 @@ import torchaudio
 from transformers import ClapModel, ClapProcessor
 
 from spotilyzer import CLAP_MODEL_NAME
+from spotilyzer.core._audio_loader import load_audio_file
 from spotilyzer.data.models import CLAPResult
 
 
@@ -153,10 +154,9 @@ class CLAPAnalyzer:
             (waveform_numpy, sample_rate) — CLAP-Processor übernimmt Resampling.
         """
         try:
-            try:
-                waveform, sr = torchaudio.load(str(audio_path), backend="soundfile")
-            except Exception:
-                waveform, sr = torchaudio.load(str(audio_path))
+            waveform, sr = load_audio_file(audio_path)
+        except RuntimeError:
+            raise
         except Exception as e:
             raise RuntimeError(f"Audio laden fehlgeschlagen: {audio_path.name} — {e}")
 
