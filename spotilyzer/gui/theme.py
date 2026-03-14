@@ -549,9 +549,10 @@ QGroupBox {{
 QGroupBox::title {{
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 2px 8px;
+    left: 8px;
+    padding: 0 4px;
     color: {c.text_muted};
-    background-color: {c.bg_primary};
+    background-color: transparent;
 }}
 
 /* ── CheckBox & RadioButton ─────────────────────────────────────── */

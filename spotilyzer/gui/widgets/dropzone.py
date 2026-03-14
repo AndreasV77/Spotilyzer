@@ -23,11 +23,13 @@ class DropZone(QFrame):
     """
 
     files_dropped = Signal(list)
+    browse_requested = Signal()   # Klick auf DropZone → Datei-Dialog
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("DropZone")
         self.setAcceptDrops(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Layout
         layout = QVBoxLayout(self)
@@ -38,6 +40,8 @@ class DropZone(QFrame):
         )
         self._label.setObjectName("DropZoneLabel")
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Mausereignisse an den Frame weiterleiten, nicht beim Label stoppen
+        self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         layout.addWidget(self._label)
 
     def set_status(self, text: str) -> None:
@@ -93,8 +97,7 @@ class DropZone(QFrame):
             self.files_dropped.emit(audio_files)
 
     def mousePressEvent(self, event) -> None:
-        """Klick öffnet Datei-Dialog (wird vom Parent verbunden)."""
+        """Klick emittiert browse_requested — Datei-Dialog wird im Parent geöffnet."""
         if event.button() == Qt.MouseButton.LeftButton:
-            # Signal an Parent, dass Browse gewünscht ist
-            # (wird in central.py verbunden)
-            super().mousePressEvent(event)
+            self.browse_requested.emit()
+        super().mousePressEvent(event)
