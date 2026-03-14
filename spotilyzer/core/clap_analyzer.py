@@ -153,7 +153,13 @@ class CLAPAnalyzer:
             (waveform_numpy, sample_rate) — CLAP-Processor übernimmt Resampling.
         """
         try:
-            waveform, sr = torchaudio.load(audio_path)
+            try:
+                waveform, sr = torchaudio.load(audio_path)
+            except RuntimeError as _e:
+                if "TorchCodec" in str(_e) or "torchcodec" in str(_e):
+                    waveform, sr = torchaudio.load(str(audio_path), backend="soundfile")
+                else:
+                    raise
         except Exception as e:
             raise RuntimeError(f"Audio laden fehlgeschlagen: {audio_path.name} — {e}")
 
