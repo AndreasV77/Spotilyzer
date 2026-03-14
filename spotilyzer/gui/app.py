@@ -417,12 +417,16 @@ class SpotilyzerApp(QMainWindow):
         self._progress_bar.setValue(0)
 
         include_waveform = self._app_mode in (AppMode.BALANCED, AppMode.PRO)
+        include_clap = self._settings_panel.get_clap_enabled()
+        vram_mode = self._settings_panel.get_vram_mode()
 
         self._worker = AnalysisWorker(
             pipeline=self._pipeline,
             files=files,
             include_audio_info=True,
             include_waveform=include_waveform,
+            include_clap=include_clap,
+            vram_mode=vram_mode,
             parent=self,
         )
         self._worker.progress.connect(self._on_analysis_progress)

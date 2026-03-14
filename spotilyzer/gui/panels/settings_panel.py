@@ -49,10 +49,11 @@ class SettingsPanel(QDockWidget):
         accent_changed(str):      Accent-Farbe wurde geändert (Hex-String).
     """
 
-    mode_changed = Signal(object)    # AppMode
-    theme_changed = Signal(object)   # ThemeMode
-    accent_changed = Signal(str)     # Hex-Farbcode
-    home_dir_changed = Signal(str)   # Startordner (leer = deaktiviert)
+    mode_changed = Signal(object)        # AppMode
+    theme_changed = Signal(object)       # ThemeMode
+    accent_changed = Signal(str)         # Hex-Farbcode
+    home_dir_changed = Signal(str)       # Startordner (leer = deaktiviert)
+    clap_enabled_changed = Signal(bool)  # CLAP ein/aus
 
     # QSettings Organisation
     _SETTINGS_ORG = "Spotilyzer"
@@ -238,6 +239,39 @@ class SettingsPanel(QDockWidget):
 
         scroll_layout.addWidget(files_group)
 
+        # ══════════════════════════════════════════════════════════════
+        # CLAP-Analyse
+        # ══════════════════════════════════════════════════════════════
+        clap_group = QGroupBox("🏷 CLAP Genre/Mood")
+        clap_layout = QVBoxLayout(clap_group)
+        clap_layout.setSpacing(6)
+
+        self._chk_clap = QCheckBox("Genre- und Mood-Tags einbeziehen")
+        self._chk_clap.setChecked(False)
+        self._chk_clap.stateChanged.connect(self._on_clap_toggled)
+        clap_layout.addWidget(self._chk_clap)
+
+        clap_hint = QLabel(
+            "Zero-Shot-Klassifikation via LAION CLAP.\n"
+            "~776 MB Download beim ersten Start.\n"
+            "Verlangsamt die Analyse um ~2–5 s/Track."
+        )
+        clap_hint.setObjectName("MutedLabel")
+        clap_hint.setWordWrap(True)
+        clap_layout.addWidget(clap_hint)
+
+        # VRAM-Modus (relevant für GPUs ≤ 6 GB)
+        vram_form = QFormLayout()
+        vram_form.setSpacing(4)
+        self._vram_combo = QComboBox()
+        self._vram_combo.addItem("Sequenziell (≤ 6 GB VRAM)", "sequential")
+        self._vram_combo.addItem("Gleichzeitig (> 6 GB VRAM)", "concurrent")
+        self._vram_combo.currentIndexChanged.connect(self._save_settings)
+        vram_form.addRow("VRAM-Modus:", self._vram_combo)
+        clap_layout.addLayout(vram_form)
+
+        scroll_layout.addWidget(clap_group)
+
         # ── Stretch am Ende ──
         scroll_layout.addStretch()
 
@@ -303,6 +337,12 @@ class SettingsPanel(QDockWidget):
         self.home_dir_changed.emit("")
         self._save_settings()
 
+    def _on_clap_toggled(self, state: int) -> None:
+        """CLAP-Checkbox geändert."""
+        enabled = bool(state)
+        self.clap_enabled_changed.emit(enabled)
+        self._save_settings()
+
     def _update_accent_preview(self, hex_color: str) -> None:
         """Aktualisiert die Accent-Vorschau (Button-Hintergrund + Label)."""
         self._accent_btn.setStyleSheet(
@@ -343,6 +383,15 @@ class SettingsPanel(QDockWidget):
         """Gibt die aktuelle Accent-Farbe als Hex-String zurück."""
         return self._accent_label.text()
 
+    def get_clap_enabled(self) -> bool:
+        """Gibt zurück ob CLAP-Analyse aktiviert ist."""
+        return self._chk_clap.isChecked()
+
+    def get_vram_mode(self) -> str:
+        """Gibt den gewählten VRAM-Modus zurück ('sequential' oder 'concurrent')."""
+        data = self._vram_combo.currentData()
+        return str(data) if data else "sequential"
+
     # ── Persistenz (QSettings) ───────────────────────────────────────
 
     def _save_settings(self) -> None:
@@ -368,6 +417,14 @@ class SettingsPanel(QDockWidget):
 
         # Dateien
         self._settings.setValue("files/home_dir", self._home_dir_edit.text())
+
+        # CLAP
+        self._settings.setValue("analysis/clap_enabled", self._chk_clap.isChecked())
+        vram_data = self._vram_combo.currentData()
+        self._settings.setValue(
+            "analysis/vram_mode",
+            vram_data if vram_data else "sequential"
+        )
 
         self._settings.sync()
 
@@ -418,6 +475,14 @@ class SettingsPanel(QDockWidget):
         home_dir = self._settings.value("files/home_dir", "")
         if home_dir:
             self._home_dir_edit.setText(home_dir)
+
+        # CLAP
+        clap_enabled = self._settings.value("analysis/clap_enabled", False, type=bool)
+        self._chk_clap.setChecked(clap_enabled)
+        vram_mode = self._settings.value("analysis/vram_mode", "sequential")
+        vram_index = self._vram_combo.findData(str(vram_mode))
+        if vram_index >= 0:
+            self._vram_combo.setCurrentIndex(vram_index)
 
     # ── Hilfsfunktionen ──────────────────────────────────────────────
 

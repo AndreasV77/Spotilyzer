@@ -71,6 +71,8 @@ class AnalysisWorker(QThread):
         files: list[str],
         include_audio_info: bool = True,
         include_waveform: bool = False,
+        include_clap: bool = False,
+        vram_mode: str = "sequential",
         parent=None,
     ):
         super().__init__(parent)
@@ -78,6 +80,8 @@ class AnalysisWorker(QThread):
         self.files = files
         self.include_audio_info = include_audio_info
         self.include_waveform = include_waveform
+        self.include_clap = include_clap
+        self.vram_mode = vram_mode
         self._cancelled = False
 
     def cancel(self):
@@ -103,6 +107,8 @@ class AnalysisWorker(QThread):
                     filepath,
                     include_audio_info=self.include_audio_info,
                     include_waveform=self.include_waveform,
+                    include_clap=self.include_clap,
+                    vram_mode=self.vram_mode,
                 )
                 self.result_ready.emit(result)
             except Exception as e:
