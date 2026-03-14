@@ -174,7 +174,7 @@ class CLAPAnalyzer:
             Tensor [1, 512] (L2-normalisiert).
         """
         inputs = self.processor(
-            audios=waveform,
+            audio=waveform,
             sampling_rate=sr,
             return_tensors="pt",
         )
