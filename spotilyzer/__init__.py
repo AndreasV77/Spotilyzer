@@ -19,4 +19,4 @@ TARGET_SAMPLE_RATE = 24000
 MAX_AUDIO_LENGTH_SEC = 30
 
 # CLAP-Konfiguration
-CLAP_MODEL_NAME = "laion/larger_clap_music"
+CLAP_MODEL_NAME = "laion/clap-htsat-fused"
