@@ -24,8 +24,6 @@ class ConfidenceBar(QWidget):
         "flop": QColor("#ef4444"),
     }
 
-    EMOJIS = {"hit": "\U0001f525", "mid": "\u2796", "flop": "\U0001f480"}
-
     BAR_ORDER = ["hit", "mid", "flop"]
 
     def __init__(self, parent=None):

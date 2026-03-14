@@ -68,7 +68,7 @@ class HighscorePanel(QDockWidget):
 
         # ── Titel-Zeile ──
         header_layout = QVBoxLayout()
-        self._title_label = QLabel("\U0001f3c6 Ranking")
+        self._title_label = QLabel("Ranking")
         self._title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         header_layout.addWidget(self._title_label)
 

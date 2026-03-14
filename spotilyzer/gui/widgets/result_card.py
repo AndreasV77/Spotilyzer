@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QVBoxLayout, QSizePolicy,
 )
 
-from spotilyzer.data.models import AnalysisResult, MEDALS, AppMode
+from spotilyzer.data.models import AnalysisResult, AppMode
 from spotilyzer.gui.widgets.confidence_bar import ConfidenceBar
 
 
@@ -28,7 +28,9 @@ class ResultCard(QFrame):
     clicked = Signal(object)  # Emittiert AnalysisResult bei Klick
 
     RATING_COLORS = {"hit": "#22c55e", "mid": "#eab308", "flop": "#ef4444"}
-    RATING_EMOJIS = {"hit": "\U0001f525", "mid": "\u2796", "flop": "\U0001f480"}
+
+    # Farbige Rang-Zahlen für Top 3 (kein Emoji — verhindert Segoe UI Emoji Hintergrundfarben)
+    RANK_COLORS = {0: "#FFD700", 1: "#B8B8B8", 2: "#CD7F32"}  # Gold, Silber, Bronze
 
     # Feste Kartenhöhen pro Modus
     # SIMPLE:   padding(24) + border(2) + header(~24) + spacing(6) + bar(26) = 82
@@ -91,18 +93,23 @@ class ResultCard(QFrame):
         """Normale Ergebnis-Karte."""
         rating = self.result.rating
         color = self.RATING_COLORS.get(rating, "#a5a5a5")
-        emoji = self.RATING_EMOJIS.get(rating, "?")
 
         # ── Zeile 1: Rang + Dateiname + Rating-Badge ──
         header = QHBoxLayout()
         header.setSpacing(8)
 
-        # Medaille / Rang — Farbe kommt via QSS (#MedalLabel / #RankLabel)
-        medal = MEDALS.get(self.rank, "")
-        rank_text = medal if medal else f"#{self.rank + 1}"
+        # Rang: Top-3 in Gold/Silber/Bronze, Rest gedimmt — kein Emoji
+        rank_text = f"#{self.rank + 1}"
         rank_label = QLabel(rank_text)
         rank_label.setFixedWidth(34)
-        rank_label.setObjectName("MedalLabel" if medal else "RankLabel")
+        rank_color = self.RANK_COLORS.get(self.rank)
+        if rank_color:
+            rank_label.setStyleSheet(
+                f"color: {rank_color}; font-weight: bold; font-size: 13px;"
+            )
+            rank_label.setObjectName("MedalLabel")
+        else:
+            rank_label.setObjectName("RankLabel")
         header.addWidget(rank_label)
 
         # Dateiname
@@ -119,9 +126,9 @@ class ResultCard(QFrame):
 
         header.addStretch()
 
-        # Rating-Badge (farbig)
+        # Rating-Badge (farbig, kein Emoji)
         confidence = self.result.probabilities.get(rating, self.result.confidence)
-        rating_label = QLabel(f" {emoji} {rating.upper()} ({confidence:.0%}) ")
+        rating_label = QLabel(f" {rating.upper()} ({confidence:.0%}) ")
         rating_label.setStyleSheet(
             f"color: {color}; font-weight: bold; font-size: 13px; "
             f"background-color: {color}18; border-radius: 4px; padding: 3px 8px;"
@@ -154,7 +161,7 @@ class ResultCard(QFrame):
         genre = clap.top_genre()
         mood = clap.top_mood()
         if genre:
-            parts.append(f"🏷 {genre}")
+            parts.append(f"Genre: {genre}")
         if mood:
             parts.append(mood)
 
