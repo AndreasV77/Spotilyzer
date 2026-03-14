@@ -142,6 +142,36 @@ class ResultCard(QFrame):
         if self.app_mode != AppMode.SIMPLE and self.result.audio_info:
             self._add_audio_info(layout)
 
+        # ── Zeile 4: CLAP Genre/Mood-Tags (ab Ausgewogen, wenn vorhanden) ──
+        if self.app_mode != AppMode.SIMPLE and self.result.clap_result:
+            self._add_clap_tags(layout)
+
+    def _add_clap_tags(self, layout: QVBoxLayout):
+        """Fügt CLAP Genre/Mood-Tags als kompakte Zeile hinzu."""
+        clap = self.result.clap_result
+        parts = []
+
+        genre = clap.top_genre()
+        mood = clap.top_mood()
+        if genre:
+            parts.append(f"🏷 {genre}")
+        if mood:
+            parts.append(mood)
+
+        # Weitere Top-Tags (ohne genre/mood, max 3 zusätzlich)
+        shown = {genre, mood} - {None}
+        extras = [t for t in clap.top_tags if t not in shown][:3]
+        if extras:
+            parts.append("· " + " · ".join(extras))
+
+        if not parts:
+            return
+
+        tags_label = QLabel("  ".join(parts))
+        tags_label.setObjectName("MutedLabel")
+        tags_label.setWordWrap(False)
+        layout.addWidget(tags_label)
+
     def _add_audio_info(self, layout: QVBoxLayout):
         """Fügt technische Audio-Informationen als kompakte Zeile hinzu."""
         ai = self.result.audio_info
