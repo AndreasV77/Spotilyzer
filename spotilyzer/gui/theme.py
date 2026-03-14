@@ -625,6 +625,38 @@ QListWidget::item:hover {{
     background-color: {c.bg_secondary};
 }}
 
+/* ── TreeView (FilePanel) ────────────────────────────────────────── */
+QTreeView {{
+    background-color: {c.bg_primary};
+    alternate-background-color: {c.bg_alt};
+    border: 1px solid {c.border};
+    outline: none;
+    selection-background-color: {c.selection};
+}}
+
+QTreeView::item {{
+    padding: 3px 4px;
+    color: {c.text_normal};
+}}
+
+QTreeView::item:selected {{
+    background-color: {c.selection};
+    color: {c.text_normal};
+}}
+
+QTreeView::item:hover {{
+    background-color: {c.bg_secondary};
+}}
+
+QTreeView QHeaderView::section {{
+    background-color: {c.bg_alt};
+    color: {c.text_normal};
+    padding: 4px 6px;
+    border: none;
+    border-bottom: 1px solid {c.border};
+    font-size: 11px;
+}}
+
 /* ── Waveform-Widget ────────────────────────────────────────────── */
 WaveformWidget {{
     background-color: {c.bg_card};
