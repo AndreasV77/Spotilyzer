@@ -32,7 +32,7 @@ class ConfidenceBar(QWidget):
         super().__init__(parent)
         self._probabilities: dict[str, float] = {"hit": 0.0, "mid": 0.0, "flop": 0.0}
 
-        self.setFixedHeight(22)
+        self.setFixedHeight(26)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     def set_probabilities(self, probabilities: dict) -> None:
