@@ -70,6 +70,15 @@ DEFAULT_TAG_SETS: dict[str, list[str]] = {
         "relaxed",
         "epic",
         "playful",
+        "haunting",
+        "atmospheric",
+        "ethereal",
+        "powerful",
+        "brooding",
+        "heavy",
+        "intense",
+        "dreamy",
+        "nostalgic",
     ],
 }
 
