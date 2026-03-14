@@ -155,8 +155,8 @@ class CLAPAnalyzer:
         try:
             try:
                 waveform, sr = torchaudio.load(audio_path)
-            except RuntimeError as _e:
-                if "TorchCodec" in str(_e) or "torchcodec" in str(_e):
+            except Exception as _e:
+                if "torchcodec" in str(_e).lower():
                     waveform, sr = torchaudio.load(str(audio_path), backend="soundfile")
                 else:
                     raise
