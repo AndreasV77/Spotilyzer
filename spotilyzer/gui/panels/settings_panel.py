@@ -86,6 +86,8 @@ class SettingsPanel(QDockWidget):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         scroll_content = QWidget()
+        scroll_content.setAutoFillBackground(False)
+        scroll_content.setStyleSheet("background-color: transparent;")
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(10)

@@ -657,6 +657,13 @@ QTreeView QHeaderView::section {{
     font-size: 11px;
 }}
 
+/* ── Separator-Linien ───────────────────────────────────────────── */
+QFrame[frameShape="4"],
+QFrame[frameShape="5"] {{
+    color: {c.border};
+    background-color: {c.border};
+}}
+
 /* ── Waveform-Widget ────────────────────────────────────────────── */
 WaveformWidget {{
     background-color: {c.bg_card};
