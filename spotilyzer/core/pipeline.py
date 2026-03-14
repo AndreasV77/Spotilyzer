@@ -13,6 +13,7 @@ from typing import Callable, Optional
 from spotilyzer.core.embedder import MERTEmbedder
 from spotilyzer.core.predictor import SpotilyzerPredictor
 from spotilyzer.core.audio_info import extract_audio_info, extract_waveform_display
+from spotilyzer.core.clap_analyzer import CLAPAnalyzer
 from spotilyzer.data.models import AnalysisResult, ModelInfo
 
 
@@ -31,6 +32,7 @@ class AnalysisPipeline:
         model_path: Path,
         device: str = "auto",
         progress_callback: Optional[Callable[[str], None]] = None,
+        vram_mode: str = "parallel",
     ):
         """
         Initialisiert die Pipeline.
@@ -39,9 +41,12 @@ class AnalysisPipeline:
             model_path: Pfad zum trainierten XGBoost-Modell (.joblib).
             device: "cuda", "cpu" oder "auto" (auto-detect).
             progress_callback: Optional, wird mit Status-Strings aufgerufen.
+            vram_mode: "parallel" (beide Modelle gleichzeitig im VRAM, Standard)
+                       oder "sequential" (MERT/CLAP wechseln sich ab, für <8 GB VRAM).
         """
         self._notify = progress_callback or (lambda msg: None)
         self.model_path = model_path
+        self.vram_mode = vram_mode
 
         self._notify("Lade Spotilyzer-Modell...")
         self.predictor = SpotilyzerPredictor(model_path)
@@ -50,6 +55,10 @@ class AnalysisPipeline:
         self.embedder = MERTEmbedder.get_instance(
             device=device, progress_callback=progress_callback
         )
+
+        # CLAPAnalyzer wird lazy geladen (erst bei erstem include_clap=True Aufruf)
+        self._clap: Optional[CLAPAnalyzer] = None
+        self._clap_device = self.embedder.device  # gleiches Device wie MERT
 
         # Model-Info für Vergleichbarkeit vorbereiten
         self._model_info = self._build_model_info()
@@ -109,11 +118,23 @@ class AnalysisPipeline:
                 return "CUDA"
         return "CPU"
 
+    def _get_clap(self, notify: Callable[[str], None]) -> CLAPAnalyzer:
+        """Lazy-Loader für CLAPAnalyzer (wird nur bei Bedarf initialisiert)."""
+        if self._clap is None:
+            notify("Lade CLAP-Modell...")
+            self._clap = CLAPAnalyzer.get_instance(
+                device=self._clap_device,
+                progress_callback=notify,
+            )
+        return self._clap
+
     def analyze(
         self,
         filepath: Path,
         include_audio_info: bool = True,
         include_waveform: bool = False,
+        include_clap: bool = False,
+        clap_tag_sets: Optional[dict] = None,
         progress_callback: Optional[Callable[[str], None]] = None,
     ) -> AnalysisResult:
         """
@@ -123,17 +144,20 @@ class AnalysisPipeline:
             filepath: Pfad zur Audio-Datei.
             include_audio_info: Technische Metadaten extrahieren?
             include_waveform: Waveform für Visualisierung extrahieren?
+            include_clap: Zero-Shot Genre/Mood-Analyse via LAION CLAP?
+            clap_tag_sets: Eigene Tag-Sets für CLAP. None = DEFAULT_TAG_SETS.
             progress_callback: Optional, für detaillierte Status-Updates.
 
         Returns:
-            AnalysisResult mit Rating, Confidence, Probabilities und optional AudioInfo.
+            AnalysisResult mit Rating, Confidence, Probabilities und optional
+            AudioInfo und CLAPResult.
         """
         notify = progress_callback or self._notify
         filepath = Path(filepath)
         timestamp = datetime.now().isoformat()
 
         try:
-            # 1. Embedding extrahieren
+            # 1. Embedding extrahieren (MERT)
             notify(f"Extrahiere Embedding: {filepath.name}...")
             embedding = self.embedder.process_file(filepath)
 
@@ -152,6 +176,21 @@ class AnalysisPipeline:
             if include_waveform:
                 waveform = extract_waveform_display(filepath)
 
+            # 5. CLAP Zero-Shot Analyse (optional)
+            clap_result = None
+            if include_clap:
+                notify(f"CLAP Genre/Mood: {filepath.name}...")
+                if self.vram_mode == "sequential":
+                    # MERT auf CPU → CLAP auf GPU → MERT wird beim nächsten
+                    # process_file()-Aufruf via _ensure_on_device() automatisch zurückgeholt
+                    self.embedder.offload_to_cpu()
+                clap = self._get_clap(notify)
+                if self.vram_mode == "sequential":
+                    clap.restore_to_device()
+                clap_result = clap.analyze(filepath, tag_sets=clap_tag_sets)
+                if self.vram_mode == "sequential":
+                    clap.offload_to_cpu()
+
             result = AnalysisResult(
                 file=filepath.name,
                 path=str(filepath),
@@ -161,6 +200,7 @@ class AnalysisPipeline:
                 probabilities=probabilities,
                 audio_info=audio_info,
                 model_info=self._model_info,
+                clap_result=clap_result,
             )
             result._waveform = waveform
             return result
@@ -178,6 +218,8 @@ class AnalysisPipeline:
         files: list[Path],
         include_audio_info: bool = True,
         include_waveform: bool = False,
+        include_clap: bool = False,
+        clap_tag_sets: Optional[dict] = None,
         progress_callback: Optional[Callable[[str, int, int], None]] = None,
         cancel_check: Optional[Callable[[], bool]] = None,
     ) -> list[AnalysisResult]:
@@ -213,6 +255,8 @@ class AnalysisPipeline:
                 filepath,
                 include_audio_info=include_audio_info,
                 include_waveform=include_waveform,
+                include_clap=include_clap,
+                clap_tag_sets=clap_tag_sets,
             )
             results.append(result)
 
