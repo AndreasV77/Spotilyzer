@@ -180,6 +180,8 @@ class CLAPAnalyzer:
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         audio_embed = self.model.get_audio_features(**inputs)
+        if not isinstance(audio_embed, torch.Tensor):
+            audio_embed = audio_embed.pooler_output
         return audio_embed / audio_embed.norm(dim=-1, keepdim=True)
 
     @torch.no_grad()
@@ -197,6 +199,8 @@ class CLAPAnalyzer:
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         text_embeds = self.model.get_text_features(**inputs)
+        if not isinstance(text_embeds, torch.Tensor):
+            text_embeds = text_embeds.pooler_output
         return text_embeds / text_embeds.norm(dim=-1, keepdim=True)
 
     def analyze(
