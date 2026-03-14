@@ -166,42 +166,28 @@ class CLAPAnalyzer:
         return waveform.squeeze(0).numpy(), sr
 
     @torch.no_grad()
-    def _get_audio_embedding(self, waveform: np.ndarray, sr: int) -> torch.Tensor:
+    def _get_scores_for_tags(
+        self, waveform: np.ndarray, sr: int, tags: list[str]
+    ) -> np.ndarray:
         """
-        Berechnet das normalisierte Audio-Embedding via CLAP.
+        Berechnet CLAP-Ähnlichkeits-Scores für Audio gegen eine Tag-Liste.
+
+        Nutzt model(**inputs) full-forward (stabiles API in transformers 5.x).
 
         Returns:
-            Tensor [1, 512] (L2-normalisiert).
+            numpy Array [N] mit logit_per_audio Scores (skalierte Cosine-Sim).
         """
         inputs = self.processor(
             audio=waveform,
-            sampling_rate=sr,
-            return_tensors="pt",
-        )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        audio_embed = self.model.get_audio_features(**inputs)
-        if not isinstance(audio_embed, torch.Tensor):
-            audio_embed = audio_embed.pooler_output
-        return audio_embed / audio_embed.norm(dim=-1, keepdim=True)
-
-    @torch.no_grad()
-    def _get_text_embeddings(self, tags: list[str]) -> torch.Tensor:
-        """
-        Berechnet normalisierte Text-Embeddings für eine Liste von Tags.
-
-        Returns:
-            Tensor [N, 512] (L2-normalisiert).
-        """
-        inputs = self.processor(
             text=tags,
+            sampling_rate=sr,
             return_tensors="pt",
             padding=True,
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        text_embeds = self.model.get_text_features(**inputs)
-        if not isinstance(text_embeds, torch.Tensor):
-            text_embeds = text_embeds.pooler_output
-        return text_embeds / text_embeds.norm(dim=-1, keepdim=True)
+        outputs = self.model(**inputs)
+        # logits_per_audio: [1, N_tags] — audio-to-text similarity (scaled)
+        return outputs.logits_per_audio.squeeze(0).cpu().numpy()
 
     def analyze(
         self,
@@ -227,25 +213,22 @@ class CLAPAnalyzer:
 
         self._ensure_on_device()
 
-        # Audio laden und Embedding berechnen
+        # Audio laden (als numpy für Processor)
         waveform, sr = self._load_audio(audio_path)
-        audio_embed = self._get_audio_embedding(waveform, sr)
 
-        # Pro Tag-Set: Cosine-Similarity berechnen
+        # Pro Tag-Set: Scores berechnen
         result_scores: dict[str, dict[str, float]] = {}
         all_scores: dict[str, float] = {}
 
         for set_name, tags in tag_sets.items():
             if not tags:
                 continue
-            text_embeds = self._get_text_embeddings(tags)
-            # Cosine Similarity: audio [1,512] @ text [N,512].T → [1,N]
-            similarities = (audio_embed @ text_embeds.T).squeeze(0).cpu().numpy()
-            scores = {tag: float(sim) for tag, sim in zip(tags, similarities)}
+            scores_arr = self._get_scores_for_tags(waveform, sr, tags)
+            scores = {tag: float(s) for tag, s in zip(tags, scores_arr)}
             result_scores[set_name] = scores
             all_scores.update(scores)
 
-        # Top-N Tags über alle Sets nach Similarity sortiert
+        # Top-N Tags über alle Sets nach Score sortiert
         top_tags = sorted(all_scores, key=all_scores.__getitem__, reverse=True)[:TOP_N_TAGS]
 
         return CLAPResult(

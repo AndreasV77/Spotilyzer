@@ -87,11 +87,11 @@ def print_result(result: AnalysisResult, style: str = "default") -> None:
         if clap.genre_scores:
             top_genre = clap.top_genre()
             top_score = clap.genre_scores.get(top_genre, 0)
-            output += f"\n\u2551    Genre:       {top_genre} ({top_score:.2f})"
+            output += f"\n\u2551    Genre:       {top_genre} ({top_score:.3f})"
         if clap.mood_scores:
             top_mood = clap.top_mood()
             top_score = clap.mood_scores.get(top_mood, 0)
-            output += f"\n\u2551    Stimmung:    {top_mood} ({top_score:.2f})"
+            output += f"\n\u2551    Stimmung:    {top_mood} ({top_score:.3f})"
         if clap.top_tags:
             output += f"\n\u2551    Top Tags:    {', '.join(clap.top_tags)}"
 

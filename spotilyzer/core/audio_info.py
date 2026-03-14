@@ -33,22 +33,18 @@ def extract_audio_info(filepath: Path) -> AudioInfo:
     """
     path = Path(filepath)
 
-    # Basis-Info via torchaudio.info() (schnell, kein Laden nötig)
+    # Basis-Info via soundfile.info() (schnell, kein torchcodec nötig)
     try:
-        info = torchaudio.info(path)
-        duration_sec = info.num_frames / info.sample_rate if info.sample_rate > 0 else 0.0
-        sample_rate = info.sample_rate
-        channels = info.num_channels
-        # Bitrate: bits_per_sample * sample_rate * channels / 1000
-        # Für komprimierte Formate (MP3) ist bits_per_sample oft 0
-        if info.bits_per_sample > 0:
-            bitrate = int(info.bits_per_sample * info.sample_rate * info.num_channels / 1000)
+        import soundfile as sf
+        info = sf.info(str(path))
+        duration_sec = info.duration
+        sample_rate = info.samplerate
+        channels = info.channels
+        # Bitrate aus Dateigröße und Dauer schätzen (soundfile liefert kein bitrate)
+        if duration_sec > 0:
+            bitrate = int(path.stat().st_size * 8 / duration_sec / 1000)
         else:
-            # Schätze aus Dateigröße und Dauer
-            if duration_sec > 0:
-                bitrate = int(path.stat().st_size * 8 / duration_sec / 1000)
-            else:
-                bitrate = None
+            bitrate = None
     except Exception:
         duration_sec = 0.0
         sample_rate = 0
