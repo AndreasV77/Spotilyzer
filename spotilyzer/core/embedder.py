@@ -77,6 +77,27 @@ class MERTEmbedder:
         """Setzt die Singleton-Instanz zurück (für Tests)."""
         cls._instance = None
 
+    def offload_to_cpu(self) -> None:
+        """
+        Verschiebt Modell auf CPU und leert GPU-Cache.
+        Für sequentiellen VRAM-Modus (MERT + CLAP abwechselnd).
+        """
+        self.model.to("cpu")
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    def restore_to_device(self) -> None:
+        """Verschiebt Modell zurück auf das konfigurierte Device."""
+        self.model.to(self.device)
+
+    def _ensure_on_device(self) -> None:
+        """Stellt sicher dass das Modell auf dem richtigen Device ist (nach offload)."""
+        current = next(self.model.parameters()).device
+        if str(current) != self.device and not (
+            self.device == "cuda" and str(current).startswith("cuda")
+        ):
+            self.model.to(self.device)
+
     def load_audio(self, filepath: Path) -> torch.Tensor:
         """
         Lädt eine Audio-Datei und preprocessed sie für MERT.
@@ -156,5 +177,6 @@ class MERTEmbedder:
         Raises:
             RuntimeError: Bei Fehler in irgendeinem Schritt.
         """
+        self._ensure_on_device()
         waveform = self.load_audio(filepath)
         return self.extract_embedding(waveform)

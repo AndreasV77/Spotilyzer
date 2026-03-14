@@ -17,3 +17,6 @@ SUPPORTED_FORMATS = {".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".wma"}
 MERT_MODEL_NAME = "m-a-p/MERT-v1-95M"
 TARGET_SAMPLE_RATE = 24000
 MAX_AUDIO_LENGTH_SEC = 30
+
+# CLAP-Konfiguration
+CLAP_MODEL_NAME = "laion/larger_clap_music"
