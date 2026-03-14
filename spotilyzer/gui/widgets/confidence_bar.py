@@ -30,7 +30,7 @@ class ConfidenceBar(QWidget):
         super().__init__(parent)
         self._probabilities: dict[str, float] = {"hit": 0.0, "mid": 0.0, "flop": 0.0}
 
-        self.setFixedHeight(26)
+        self.setFixedHeight(20)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     def set_probabilities(self, probabilities: dict) -> None:
@@ -49,8 +49,8 @@ class ConfidenceBar(QWidget):
         h = rect.height()
         radius = h / 2
 
-        # Rechts Platz für Prozent-Labels lassen (3 Labels à ~48px)
-        label_width = 145
+        # Rechts Platz für Prozent-Labels lassen (3 Labels à ~44px)
+        label_width = 132
         bar_width = max(0, rect.width() - label_width)
 
         # ── Hintergrund-Balken ──
@@ -98,7 +98,7 @@ class ConfidenceBar(QWidget):
 
         # ── Prozent-Labels rechts ──
         label_x = bar_width + 8
-        font = QFont("Segoe UI", 9)
+        font = QFont("Segoe UI", 8)
         font.setBold(False)
         painter.setFont(font)
 
@@ -111,12 +111,12 @@ class ConfidenceBar(QWidget):
             text = f"{val:.0%}"
 
             painter.setPen(QPen(color))
-            label_rect = QRectF(label_x, 0, 45, h)
+            label_rect = QRectF(label_x, 0, 42, h)
             painter.drawText(
                 label_rect,
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 text,
             )
-            label_x += 47
+            label_x += 44
 
         painter.end()
