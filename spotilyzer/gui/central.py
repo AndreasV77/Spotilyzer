@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -289,10 +289,14 @@ class CentralWidget(QWidget):
             btn.style().polish(btn)
 
     def _on_browse(self) -> None:
-        """Öffnet den Datei-Dialog (via DropZone.browse_requested Signal)."""
+        """Verzögert den Datei-Dialog damit das mousePressEvent vollständig abgearbeitet wird."""
+        QTimer.singleShot(0, self._open_file_dialog)
+
+    def _open_file_dialog(self) -> None:
+        """Öffnet den Datei-Dialog."""
         extensions = " ".join(f"*{ext}" for ext in sorted(SUPPORTED_FORMATS))
         files, _ = QFileDialog.getOpenFileNames(
-            self,
+            self.window(),
             "Audio-Dateien auswählen",
             self._open_dir,
             f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
