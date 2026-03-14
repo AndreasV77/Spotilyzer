@@ -66,12 +66,9 @@ def extract_audio_info(filepath: Path) -> AudioInfo:
 
     try:
         try:
-            waveform, sr = torchaudio.load(path)
-        except Exception as _e:
-            if "torchcodec" in str(_e).lower():
-                waveform, sr = torchaudio.load(str(path), backend="soundfile")
-            else:
-                raise
+            waveform, sr = torchaudio.load(str(path), backend="soundfile")
+        except Exception:
+            waveform, sr = torchaudio.load(str(path))
 
         # Mono für Analyse
         if waveform.shape[0] > 1:
@@ -308,12 +305,9 @@ def extract_waveform_display(
     """
     try:
         try:
-            waveform, sr = torchaudio.load(filepath)
-        except Exception as _e:
-            if "torchcodec" in str(_e).lower():
-                waveform, sr = torchaudio.load(str(filepath), backend="soundfile")
-            else:
-                raise
+            waveform, sr = torchaudio.load(str(filepath), backend="soundfile")
+        except Exception:
+            waveform, sr = torchaudio.load(str(filepath))
 
         # Mono
         if waveform.shape[0] > 1:

@@ -117,12 +117,11 @@ class MERTEmbedder:
         """
         try:
             try:
-                waveform, sample_rate = torchaudio.load(filepath)
-            except Exception as _e:
-                if "torchcodec" in str(_e).lower() or "torchcodec" in type(_e).__name__.lower():
-                    waveform, sample_rate = torchaudio.load(str(filepath), backend="soundfile")
-                else:
-                    raise
+                # soundfile first: avoids torchcodec backend in torchaudio >=2.5
+                waveform, sample_rate = torchaudio.load(str(filepath), backend="soundfile")
+            except Exception:
+                # fallback for formats soundfile doesn't support
+                waveform, sample_rate = torchaudio.load(str(filepath))
         except Exception as e:
             raise RuntimeError(f"Audio laden fehlgeschlagen: {filepath.name} - {e}")
 
