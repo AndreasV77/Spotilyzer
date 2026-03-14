@@ -93,7 +93,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Ansichts-Modus
         # ══════════════════════════════════════════════════════════════
-        mode_group = QGroupBox("\U0001f4cb Ansicht")
+        mode_group = QGroupBox("Ansicht")
         mode_layout = QFormLayout(mode_group)
         mode_layout.setSpacing(6)
 
@@ -115,7 +115,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Theme
         # ══════════════════════════════════════════════════════════════
-        theme_group = QGroupBox("\U0001f3a8 Theme")
+        theme_group = QGroupBox("Theme")
         theme_layout = QFormLayout(theme_group)
         theme_layout.setSpacing(6)
 
@@ -155,7 +155,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Gerät / System
         # ══════════════════════════════════════════════════════════════
-        device_group = QGroupBox("\U0001f4bb System")
+        device_group = QGroupBox("System")
         device_layout = QFormLayout(device_group)
         device_layout.setSpacing(4)
 
@@ -179,7 +179,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Export-Defaults
         # ══════════════════════════════════════════════════════════════
-        export_group = QGroupBox("\U0001f4be Export-Defaults")
+        export_group = QGroupBox("Export-Defaults")
         export_layout = QVBoxLayout(export_group)
         export_layout.setSpacing(4)
 
@@ -208,7 +208,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Dateien
         # ══════════════════════════════════════════════════════════════
-        files_group = QGroupBox("\U0001f4c1 Dateien")
+        files_group = QGroupBox("Dateien")
         files_layout = QVBoxLayout(files_group)
         files_layout.setSpacing(6)
 
@@ -242,7 +242,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # CLAP-Analyse
         # ══════════════════════════════════════════════════════════════
-        clap_group = QGroupBox("🏷 CLAP Genre/Mood")
+        clap_group = QGroupBox("CLAP Genre/Mood")
         clap_layout = QVBoxLayout(clap_group)
         clap_layout.setSpacing(6)
 

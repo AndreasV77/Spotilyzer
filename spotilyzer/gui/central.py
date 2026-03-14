@@ -68,7 +68,7 @@ class CentralWidget(QWidget):
         # ── DropZone ──
         self._dropzone = DropZone()
         self._dropzone.files_dropped.connect(self.files_selected.emit)
-        self._dropzone.mousePressEvent = self._on_dropzone_click
+        self._dropzone.browse_requested.connect(self._on_browse)
         layout.addWidget(self._dropzone)
 
         # ── Toolbar: Sortierung + Buttons ──
@@ -288,18 +288,17 @@ class CentralWidget(QWidget):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-    def _on_dropzone_click(self, event) -> None:
-        """Öffnet den Datei-Dialog bei Klick auf die DropZone."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            extensions = " ".join(f"*{ext}" for ext in sorted(SUPPORTED_FORMATS))
-            files, _ = QFileDialog.getOpenFileNames(
-                self,
-                "Audio-Dateien auswählen",
-                self._open_dir,
-                f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
-            )
-            if files:
-                self.files_selected.emit(files)
+    def _on_browse(self) -> None:
+        """Öffnet den Datei-Dialog (via DropZone.browse_requested Signal)."""
+        extensions = " ".join(f"*{ext}" for ext in sorted(SUPPORTED_FORMATS))
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Audio-Dateien auswählen",
+            self._open_dir,
+            f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
+        )
+        if files:
+            self.files_selected.emit(files)
 
     def _on_clear(self) -> None:
         """Clear-Button Handler."""
