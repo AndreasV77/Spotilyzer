@@ -90,6 +90,8 @@ class AnalysisWorker(QThread):
 
     def run(self):
         total = len(self.files)
+        # vram_mode ist ein Pipeline-Attribut, kein analyze()-Parameter
+        self.pipeline.vram_mode = self.vram_mode
 
         for i, filepath_str in enumerate(self.files):
             if self._cancelled:
@@ -108,7 +110,6 @@ class AnalysisWorker(QThread):
                     include_audio_info=self.include_audio_info,
                     include_waveform=self.include_waveform,
                     include_clap=self.include_clap,
-                    vram_mode=self.vram_mode,
                 )
                 self.result_ready.emit(result)
             except Exception as e:
