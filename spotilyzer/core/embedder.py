@@ -1,7 +1,7 @@
 """
-MERTEmbedder - Singleton für MERT-v1-95M Audio-Embedding-Extraktion.
+MERTEmbedder - Singleton für MERT-v1-330M Audio-Embedding-Extraktion.
 
-Extrahiert 768-dimensionale Embeddings aus Audio-Dateien.
+Extrahiert 1024-dimensionale Embeddings aus Audio-Dateien.
 Unterstützt CUDA (GPU) und CPU mit automatischer Erkennung.
 
 Quelle: Konsolidiert aus spotilyzer_gui.py (Z.71-128) und analyze_track.py (Z.43-111).
@@ -23,7 +23,7 @@ from spotilyzer.core._audio_loader import load_audio_file
 
 class MERTEmbedder:
     """
-    Singleton: Lädt MERT-v1-95M einmalig, extrahiert 768-dim Embeddings.
+    Singleton: Lädt MERT-v1-330M einmalig, extrahiert 1024-dim Embeddings.
 
     Usage:
         embedder = MERTEmbedder.get_instance(device="cuda")
@@ -149,7 +149,7 @@ class MERTEmbedder:
             waveform: 1D Tensor (Mono, 24kHz).
 
         Returns:
-            768-dimensionales numpy Array.
+            1024-dimensionales numpy Array.
 
         Raises:
             RuntimeError: Bei Fehler in der Embedding-Extraktion.
@@ -175,7 +175,7 @@ class MERTEmbedder:
             filepath: Pfad zur Audio-Datei.
 
         Returns:
-            768-dimensionales numpy Array.
+            1024-dimensionales numpy Array.
 
         Raises:
             RuntimeError: Bei Fehler in irgendeinem Schritt.
