@@ -2,7 +2,7 @@
 Spotilyzer - Hit/Mid/Flop Audio Analyzer
 =========================================
 ML-basierte Bewertung der Mainstream-Kompatibilität von Audio-Tracks.
-Pipeline: MERT-v1-95M Embeddings → XGBoost 3-Klassen-Klassifikation.
+Pipeline: MERT-v1-330M Embeddings → XGBoost 3-Klassen-Klassifikation.
 
 Autor: Claude Opus (für Andreas Vogelsang)
 """
@@ -14,7 +14,8 @@ __author__ = "Andreas Vogelsang"
 SUPPORTED_FORMATS = {".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".wma"}
 
 # MERT-Konfiguration
-MERT_MODEL_NAME = "m-a-p/MERT-v1-95M"
+MERT_MODEL_NAME = "m-a-p/MERT-v1-330M"
+MERT_EMBEDDING_DIM = 1024          # 95M → 768, 330M → 1024
 TARGET_SAMPLE_RATE = 24000
 MAX_AUDIO_LENGTH_SEC = 30
 

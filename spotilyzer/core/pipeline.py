@@ -90,7 +90,7 @@ class AnalysisPipeline:
         return ModelInfo(
             model_name=self.model_path.name,
             model_path=str(self.model_path),
-            embedder="MERT-v1-95M",
+            embedder="MERT-v1-330M",
             device=self.embedder.device,
             training_date=training_date,
             dataset_info=dataset_info,

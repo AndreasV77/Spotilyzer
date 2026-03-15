@@ -12,7 +12,7 @@ Output: NumPy-Array mit Embeddings + Metadaten-CSV
 Autor: Claude Opus (für Andreas Vogelsang)
 Datum: 2026-03-02
 
-GPU-Empfehlung: MERT auf GPU: <1s pro Track, auf CPU: ~10-15s pro Track
+GPU-Empfehlung: MERT auf GPU: ~1-2s pro Track, auf CPU: ~15-25s pro Track
 """
 
 import sys
@@ -37,7 +37,7 @@ from config import PREVIEWS_DIR, EMBEDDINGS_DIR
 
 DEFAULT_INPUT = str(PREVIEWS_DIR)
 DEFAULT_OUTPUT = str(EMBEDDINGS_DIR)
-MODEL_NAME = "m-a-p/MERT-v1-95M"  # ~380MB, musik-optimiert
+MODEL_NAME = "m-a-p/MERT-v1-330M"  # ~1.2GB, musik-optimiert (330M Parameter, 1024-dim)
 
 # Audio-Konfiguration (MERT erwartet 24kHz)
 TARGET_SAMPLE_RATE = 24000
@@ -130,17 +130,17 @@ class MERTEmbedder:
             embedding = hidden_states.mean(dim=1).squeeze(0)  # [768]
             
             return embedding.cpu().numpy()
-            
+
         except Exception as e:
             print(f"    Fehler bei Embedding-Extraktion: {e}", file=sys.stderr)
             return None
-    
+
     def process_file(self, filepath: Path) -> np.ndarray | None:
         """
         Kompletter Pipeline: Laden → Embedding extrahieren.
-        
+
         Returns:
-            NumPy-Array mit Shape [768] oder None bei Fehler
+            NumPy-Array mit Shape [1024] oder None bei Fehler
         """
         waveform = self.load_audio(filepath)
         if waveform is None:
@@ -374,7 +374,7 @@ def main():
         print(f"  VRAM:      {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
     
     # Geschätzte Zeit
-    time_per_file = 0.8 if actual_device == "cuda" else 12.0
+    time_per_file = 1.5 if actual_device == "cuda" else 20.0
     total_files = min(len(mp3_files), args.limit) if args.limit > 0 else len(mp3_files)
     est_minutes = total_files * time_per_file / 60
     print(f"\n  Geschätzte Zeit: ~{est_minutes:.0f} Minuten")
