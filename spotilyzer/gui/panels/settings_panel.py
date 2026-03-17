@@ -197,7 +197,7 @@ class SettingsPanel(QDockWidget):
         self._model_custom_edit.setPlaceholderText("Auto-Erkennung...")
         self._model_custom_edit.setToolTip(
             "Benutzerdefiniertes Modell (.joblib)\n"
-            "Leer = Auto-Erkennung (models/spotilyzer_model.joblib)"
+            "Leer = Auto-Erkennung (neuestes spotilyzer_model_*.joblib in models/)"
         )
         device_layout.addRow("Modell:", self._model_custom_edit)
 
