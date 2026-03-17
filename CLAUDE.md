@@ -71,8 +71,8 @@ Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/large
 
 ## Setup
 
-- **Python**: 3.12 (dev env); minimum 3.10 per `pyproject.toml`; venv at `.venv312/`
-- **Activate**: `.\.venv312\Scripts\Activate.ps1` (PowerShell)
+- **Python**: 3.12 (dev env); minimum 3.10 per `pyproject.toml`; venv at `.venv-spotilyzer/` (5.7 GB inkl. CUDA-Libs)
+- **Activate**: `.\.venv-spotilyzer\Scripts\Activate.ps1` (PowerShell)
 - **Install core**: `pip install -e .`
 - **Install with dev deps**: `pip install -e ".[dev]"` (adds pyinstaller, pytest)
 - **Model required**: `models/spotilyzer_model.joblib` must exist before running
@@ -108,12 +108,12 @@ python strip_cuda.py
 
 ```
 spotilyzer/              # installable package (pyproject.toml), version 2.0.0
-  __init__.py            # SUPPORTED_FORMATS, MERT_MODEL_NAME="m-a-p/MERT-v1-95M",
-                         # CLAP_MODEL_NAME="laion/larger_clap_music",
+  __init__.py            # SUPPORTED_FORMATS, MERT_MODEL_NAME="m-a-p/MERT-v1-330M",
+                         # MERT_EMBEDDING_DIM=1024, CLAP_MODEL_NAME="laion/larger_clap_music",
                          # TARGET_SAMPLE_RATE=24000, MAX_AUDIO_LENGTH_SEC=30
   core/
     pipeline.py          # AnalysisPipeline — orchestrates Embedder + Predictor + AudioInfo + CLAP
-    embedder.py          # MERTEmbedder (singleton) — loads MERT, extracts 768-dim embeddings
+    embedder.py          # MERTEmbedder (singleton) — loads MERT, extracts 1024-dim embeddings (330M) / 768-dim (95M)
     predictor.py         # SpotilyzerPredictor — wraps XGBoost model (.joblib dict)
     audio_info.py        # extract_audio_info(), extract_waveform_display(); LUFS via pyloudnorm
     clap_analyzer.py     # CLAPAnalyzer (singleton) — zero-shot genre/mood via LAION CLAP
@@ -173,7 +173,7 @@ Die alten Skripte bleiben als Referenz erhalten, sollten aber nicht mehr verwend
 
 **Auto-save**: results persist to `spotilyzer_results.json` in CWD after each batch. Loaded automatically on startup. Format version `"2.0"`.
 
-**Model search order** (GUI): `models/spotilyzer_model.joblib` → project root → `~/.spotilyzer/models/` → PyInstaller bundle (`sys._MEIPASS`).
+**Model search order** (GUI): Custom path in QSettings (highest priority) → glob `models/spotilyzer_model_*.joblib` (newest by mtime) → project root → `~/.spotilyzer/models/` → fallback to legacy `spotilyzer_model.joblib` → PyInstaller bundle (`sys._MEIPASS`).
 
 **Audio preview**: `QMediaPlayer` + `QAudioOutput` from `PySide6.QtMultimedia`. Supports MP3, FLAC, WAV, OGG via Windows Media Foundation backend.
 
@@ -210,26 +210,45 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 ## Model Performance (current)
 
-Trained on **5,600 samples** (4,789 Deezer 30s previews + charts), 768-dim MERT embeddings.
+Zwei Modelle in `models/` (jeweils `spotilyzer_model_{embedder}_{date}.joblib`):
+
+### Aktives Modell: MERTv1330M_20260317 (1024-dim)
+
+Trained on **8,738 samples** (Deezer 30s previews, DE/US/UK/FR/BR/ES + charts), label-swap-bug fixed, compute_sample_weight balanced.
 
 | Metric | Value |
 |--------|-------|
-| Accuracy | 71.0% |
-| Balanced Accuracy | 62.5% |
-| F1 macro | 64.8% |
-| Hit Recall | **93.6%** (strong) |
-| Flop Recall | 26.8% (weak — many Flops misclassified as Hits) |
-| Mid Precision | 94.1% (strong) |
+| Balanced Accuracy | 51.3% |
+| Hit Recall | **15.2%** (77.6% der Hits → Mid — zu konservativ) |
+| Flop Recall | 59.6% |
 
-**Model bias:** Defaults to "Hit" under uncertainty. Practical interpretation: 85%+ confidence = genuine potential; below 60% = treat as uncertain.
+**Praktische Verwendung:** Guter Flop-Filter. Hit-Erkennung unzuverlässig bis mehr Hit-Daten vorhanden (Ziel: ≥2000 Hits).
 
-**Inference speed:** ~0.53s/track on GTX 1660 Ti.
+### Modell: MERTv195M_20260317 (768-dim) — neu trainiert
 
-**Zur Verbesserung dieser Metriken:** Siehe SpotilyzerTraining-Subprojekt.
+Trained on **8,738 samples** (gleicher Datensatz), bug-fixed, max_depth=6, colsample_bytree=0.8.
+
+| Metric | Value |
+|--------|-------|
+| Balanced Accuracy | 47.8% (CV) |
+| Hit Recall | **5.6%** — schlechter als 330M |
+| Flop Recall | 48.6% |
+
+**Bewertung:** Schlechter als 330M-Modell trotz 95M-optimierten Params. Ursache: 626 Hits (7.2%) Klassenunterrepräsentation. Noch nicht nach Spotilyzer/models/ kopiert.
+
+### Altes Referenzmodell: MERTv195M_20260302 (768-dim)
+
+Trained on **5,600 samples** mit label-swap-bug — historisch, nicht produktiv verwenden.
+
+**Model bias:** Defaults to "Hit" under uncertainty. Practical interpretation: 85%+ confidence = genuine potential; below 60% = treat as uncertain. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
+
+**Inference speed:** ~0.53s/track (95M) / ~0.8s/track (330M) on GTX 1660 Ti.
+
+**Modell-Vergleich:** Siehe `models/MODEL_COMPARISON.md`.
+
+**Zur Verbesserung:** Mehr Hit-Samples (IT, MX, CA, AU, JP Charts), Ziel ≥2000 Hits. → SpotilyzerTraining.
 
 ## Known Issues & Gotchas
-
-**App icon missing:** `resources/spotilyzer.ico` does not exist yet. The `spotilyzer.spec` conditionally includes it if present — the build works without it, but the window and taskbar will show the default Qt icon.
 
 **Drag & Drop + admin shell (Windows UIPI):** D&D from Explorer does not work when the app runs in an elevated terminal. Run `python main.py` from a non-admin shell, or use the file-open dialog instead.
 
@@ -325,12 +344,12 @@ Geplant: Upgrade auf 16+ GB
 
 ### Akzeptanzkriterien
 
-- [ ] `CLAPAnalyzer` Singleton mit lazy-loading
-- [ ] `CLAPResult` Dataclass mit Serialisierung
-- [ ] Konfigurierbare Tag-Sets (nicht hardcoded)
-- [ ] Integration in CLI: `--include-clap` Flag
-- [ ] Integration in GUI: Settings-Checkbox + Anzeige in Result-Card (PRO-Mode)
-- [ ] Sequentieller VRAM-Modus funktioniert auf 6 GB
+- [x] `CLAPAnalyzer` Singleton mit lazy-loading
+- [x] `CLAPResult` Dataclass mit Serialisierung
+- [x] Konfigurierbare Tag-Sets (nicht hardcoded)
+- [x] Integration in CLI: `--include-clap` Flag
+- [ ] Integration in GUI: Settings-Checkbox + Anzeige in Result-Card (PRO-Mode) ← **offen**
+- [x] Sequentieller VRAM-Modus funktioniert auf 6 GB
 - [ ] Tests für Similarity-Berechnung
 
 ### Referenz-Dokumente
@@ -343,9 +362,9 @@ Geplant: Upgrade auf 16+ GB
 ## Roadmap
 
 **Outstanding (near-term):**
-- Create `resources/spotilyzer.ico` (app icon, currently missing)
-- **LAION CLAP Integration** (see NEXT TASK above)
+- **CLAP GUI-Integration** (see NEXT TASK above): Settings-Checkbox (PRO mode) + CLAPResult in ResultCard
 - Fix BPM octave error (halve if > configurable threshold, e.g., 160 BPM for slow genres)
+- ~~95M-Neutraining~~ ✅ — MERTv195M_20260317 trainiert (BA=47.8%, Hit=5.6% — schlechter als 330M, noch nicht deployed)
 
 **Medium-term:**
 - ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall still low (~15%) due to class imbalance, more training data needed
@@ -369,8 +388,6 @@ Geplant: Upgrade auf 16+ GB
 
 | Metrik | Problem | Fix |
 |--------|---------|-----|
-| **LUFS** | RMS-Approximation, nicht EBU R128 | `pyloudnorm` Bibliothek |
-| **BPM** | Tempo-Verdopplung/-Halbierung | `librosa.beat.tempo()` |
-| **Energy** | Willkürliche Skalierung, unklare Definition | Aufteilen in Spectral Centroid, Flatness, Onset Rate |
-
-Diese Fixes sind Quick-Wins (je ~2-4h) und können parallel zur CLAP-Integration erfolgen.
+| ~~**LUFS**~~ | ~~RMS-Approximation, nicht EBU R128~~ | ✅ `pyloudnorm` integriert (EBU R128 K-weighting) |
+| **BPM** | Tempo-Verdopplung/-Halbierung | `librosa.beat.tempo()` — noch offen |
+| **Energy** | Willkürliche Skalierung, unklare Definition | Aufteilen in Spectral Centroid, Flatness, Onset Rate — noch offen |
