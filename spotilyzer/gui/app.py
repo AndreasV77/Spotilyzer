@@ -375,11 +375,12 @@ class SpotilyzerApp(QMainWindow):
         self._pipeline = pipeline
 
         device_display = pipeline.device_display
+        model_display = pipeline.model_path.name
         self._central.set_status(
             f"\u2705 Bereit! Device: {device_display} | "
             f"Ziehe Audio-Dateien hierher oder klicke zum Auswählen"
         )
-        self._status_device.setText(f"Device: {device_display}")
+        self._status_device.setText(f"Device: {device_display} | Modell: {model_display}")
         self._settings_panel.set_device_info(device_display)
 
         # Exporter mit Pipeline-Infos konfigurieren
