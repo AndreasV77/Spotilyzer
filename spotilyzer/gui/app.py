@@ -350,19 +350,28 @@ class SpotilyzerApp(QMainWindow):
             if p.exists():
                 return p
 
-        candidates = [
-            Path("models/spotilyzer_model.joblib"),
-            Path(__file__).parent.parent.parent / "models" / "spotilyzer_model.joblib",
-            Path.home() / ".spotilyzer" / "models" / "spotilyzer_model.joblib",
+        # Verzeichnisse in Prioritätsreihenfolge
+        models_dirs = [
+            Path("models"),
+            Path(__file__).parent.parent.parent / "models",
+            Path.home() / ".spotilyzer" / "models",
         ]
-        # Auch aus frozen/bundled Exe (PyInstaller)
         if getattr(sys, "frozen", False):
-            base = Path(sys._MEIPASS)
-            candidates.insert(0, base / "models" / "spotilyzer_model.joblib")
+            models_dirs.insert(0, Path(sys._MEIPASS) / "models")
 
-        for p in candidates:
-            if p.exists():
-                return p
+        for models_dir in models_dirs:
+            # Neuestes spotilyzer_model_*.joblib bevorzugen
+            found = sorted(
+                models_dir.glob("spotilyzer_model_*.joblib"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if found:
+                return found[0]
+            # Fallback auf legacy-Dateiname
+            legacy = models_dir / "spotilyzer_model.joblib"
+            if legacy.exists():
+                return legacy
         return None
 
     def _on_init_progress(self, message: str) -> None:

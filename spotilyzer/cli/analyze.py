@@ -20,7 +20,18 @@ from spotilyzer.core.pipeline import AnalysisPipeline
 from spotilyzer.data.models import AnalysisResult
 
 
-DEFAULT_MODEL_PATH = Path("models/spotilyzer_model.joblib")
+def _find_default_model() -> Path:
+    """Neuestes spotilyzer_model_*.joblib in models/; Fallback auf legacy-Name."""
+    models_dir = Path("models")
+    found = sorted(
+        models_dir.glob("spotilyzer_model_*.joblib"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return found[0] if found else models_dir / "spotilyzer_model.joblib"
+
+
+DEFAULT_MODEL_PATH = _find_default_model()
 
 
 def print_result(result: AnalysisResult, style: str = "default") -> None:
