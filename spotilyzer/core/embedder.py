@@ -143,7 +143,7 @@ class MERTEmbedder:
     @torch.no_grad()
     def extract_embedding(self, waveform: torch.Tensor) -> np.ndarray:
         """
-        Extrahiert ein 768-dim Embedding aus einer Waveform.
+        Extrahiert ein 1024-dim Embedding aus einer Waveform.
 
         Args:
             waveform: 1D Tensor (Mono, 24kHz).
@@ -169,7 +169,7 @@ class MERTEmbedder:
 
     def process_file(self, filepath: Path) -> np.ndarray:
         """
-        Komplette Pipeline: Audio-Datei → 768-dim Embedding.
+        Komplette Pipeline: Audio-Datei → 1024-dim Embedding.
 
         Args:
             filepath: Pfad zur Audio-Datei.

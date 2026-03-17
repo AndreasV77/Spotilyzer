@@ -316,6 +316,8 @@ class SpotilyzerApp(QMainWindow):
         self._settings_panel.theme_changed.connect(self._on_theme_changed)
         self._settings_panel.accent_changed.connect(self._on_accent_changed)
         self._settings_panel.home_dir_changed.connect(self.set_home_dir)
+        self._settings_panel.device_changed.connect(self._on_device_changed)
+        self._settings_panel.model_path_changed.connect(self._on_model_path_changed)
 
     # ── Pipeline-Initialisierung ─────────────────────────────────────
 
@@ -332,14 +334,22 @@ class SpotilyzerApp(QMainWindow):
         self._central.set_status("Initialisiere ML-Pipeline...")
         self._settings_panel.set_model_path(str(model_path))
 
-        self._init_worker = PipelineInitWorker(model_path, parent=self)
+        device = self._settings_panel.get_device()
+        self._init_worker = PipelineInitWorker(model_path, device=device, parent=self)
         self._init_worker.progress.connect(self._on_init_progress)
         self._init_worker.ready.connect(self._on_pipeline_ready)
         self._init_worker.error.connect(self._on_pipeline_error)
         self._init_worker.start()
 
     def _find_model_path(self) -> Optional[Path]:
-        """Sucht das Modell in bekannten Pfaden."""
+        """Sucht das Modell — zuerst benutzerdefinierter Pfad, dann Auto-Erkennung."""
+        # Benutzerdefinierter Pfad hat Vorrang
+        custom = self._settings_panel.get_custom_model_path()
+        if custom:
+            p = Path(custom)
+            if p.exists():
+                return p
+
         candidates = [
             Path("models/spotilyzer_model.joblib"),
             Path(__file__).parent.parent.parent / "models" / "spotilyzer_model.joblib",
@@ -387,6 +397,23 @@ class SpotilyzerApp(QMainWindow):
             "Pipeline-Fehler",
             f"Die ML-Pipeline konnte nicht initialisiert werden:\n\n{error_msg}",
         )
+
+    def _on_device_changed(self, device: str) -> None:
+        """Device-Auswahl geändert — Pipeline neu initialisieren."""
+        from spotilyzer.core.embedder import MERTEmbedder
+        MERTEmbedder.reset_instance()
+        self._pipeline = None
+        self._central.set_status(f"Device auf '{device}' geändert — lade Pipeline neu...")
+        self._init_pipeline()
+
+    def _on_model_path_changed(self, path: str) -> None:
+        """Benutzerdefinierter Modell-Pfad geändert — Pipeline neu initialisieren."""
+        from spotilyzer.core.embedder import MERTEmbedder
+        MERTEmbedder.reset_instance()
+        self._pipeline = None
+        label = Path(path).name if path else "Auto-Erkennung"
+        self._central.set_status(f"Modell geändert ({label}) — lade Pipeline neu...")
+        self._init_pipeline()
 
     # ── Analyse ──────────────────────────────────────────────────────
 
