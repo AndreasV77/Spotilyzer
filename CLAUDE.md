@@ -224,13 +224,14 @@ Country charts (DE, US, UK, JP, GLOBAL) add ~500 extra tracks to training data.
 - Fix BPM octave error (halve if > configurable threshold, e.g., 160 BPM for slow genres)
 
 **Medium-term:**
-- MERT-v1-330M upgrade: switch embedder to `m-a-p/MERT-v1-330M` (1024-dim), retrain XGBoost in SpotilyzerTraining (overnight GPU job), swap `.joblib` — expected quality gain on ambiguous tracks
+- ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall still low (~15%) due to class imbalance, more training data needed
 - "Sounds like..." — similarity search in embedding space
 - Genre classification — second model for cluster assignment
 - In-app genre cluster editor + scouting trigger (PRO mode)
 - Model comparison panel (PRO mode)
-- HF token support (`HF_TOKEN` env var) for higher rate limits
+- ~~HF token support (`HF_TOKEN` env var)~~ ✅ — set as Windows user env var
 
 **Long-term:**
 - Genre-specific models (one per cluster)
 - Portable Windows EXE (PyInstaller + CUDA strip, targeting ~3 GB)
+- **QQ Music / NetEase Cloud Music als Trainingsdatenquelle** (eigenes Projekt): Beide Plattformen haben öffentliche APIs mit Popularitätssignalen (Play-Count, Kommentare, Favoriten) und sind hit-dicht im asiatischen/internationalen Mainstream. Zugang über inoffizielle/reverse-engineerte APIs oder Drittanbieter-Wrapper (z.B. `pyncm` für NetEase). Rechtliche Lage unklar — vor Implementierung prüfen. Primärer Mehrwert: deutlich mehr Hit-Samples für unterrepräsentierte Klasse.

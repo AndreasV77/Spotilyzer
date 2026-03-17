@@ -54,6 +54,8 @@ class SettingsPanel(QDockWidget):
     accent_changed = Signal(str)         # Hex-Farbcode
     home_dir_changed = Signal(str)       # Startordner (leer = deaktiviert)
     clap_enabled_changed = Signal(bool)  # CLAP ein/aus
+    device_changed = Signal(str)         # Device-Auswahl ("auto", "cuda", "cpu")
+    model_path_changed = Signal(str)     # Modell-Pfad (leer = Auto-Erkennung)
 
     # QSettings Organisation
     _SETTINGS_ORG = "Spotilyzer"
@@ -162,12 +164,24 @@ class SettingsPanel(QDockWidget):
         device_layout = QFormLayout(device_group)
         device_layout.setSpacing(4)
 
+        # Device-Auswahl (CPU/GPU)
+        self._device_combo = QComboBox()
+        self._device_combo.addItem("Auto (CUDA bevorzugt)", "auto")
+        self._device_combo.addItem("GPU (CUDA)", "cuda")
+        self._device_combo.addItem("CPU", "cpu")
+        self._device_combo.setToolTip(
+            "Änderung wird nach Neustart der Pipeline wirksam"
+        )
+        self._device_combo.currentIndexChanged.connect(self._on_device_changed)
+        device_layout.addRow("Device:", self._device_combo)
+
         self._device_label = QLabel(self._detect_device_info())
         self._device_label.setWordWrap(True)
         self._device_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        device_layout.addRow("Device:", self._device_label)
+        self._device_label.setObjectName("MutedLabel")
+        device_layout.addRow("Aktiv:", self._device_label)
 
         self._model_path_label = QLabel("spotilyzer_model.joblib")
         self._model_path_label.setWordWrap(True)
@@ -175,7 +189,30 @@ class SettingsPanel(QDockWidget):
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
         self._model_path_label.setObjectName("MutedLabel")
-        device_layout.addRow("Modell:", self._model_path_label)
+        device_layout.addRow("Geladen:", self._model_path_label)
+
+        # Modell-Dateipicker (benutzerdefinierter Pfad)
+        self._model_custom_edit = QLineEdit()
+        self._model_custom_edit.setReadOnly(True)
+        self._model_custom_edit.setPlaceholderText("Auto-Erkennung...")
+        self._model_custom_edit.setToolTip(
+            "Benutzerdefiniertes Modell (.joblib)\n"
+            "Leer = Auto-Erkennung (models/spotilyzer_model.joblib)"
+        )
+        device_layout.addRow("Modell:", self._model_custom_edit)
+
+        model_btn_row = QHBoxLayout()
+        self._model_browse_btn = QPushButton("Durchsuchen...")
+        self._model_browse_btn.clicked.connect(self._on_model_browse)
+        model_btn_row.addWidget(self._model_browse_btn)
+
+        self._model_reset_btn = QPushButton("Auto")
+        self._model_reset_btn.setFixedWidth(56)
+        self._model_reset_btn.setToolTip("Auf automatische Modell-Erkennung zurücksetzen")
+        self._model_reset_btn.clicked.connect(self._on_model_reset)
+        model_btn_row.addWidget(self._model_reset_btn)
+        model_btn_row.addStretch()
+        device_layout.addRow("", model_btn_row)
 
         scroll_layout.addWidget(device_group)
 
@@ -346,6 +383,33 @@ class SettingsPanel(QDockWidget):
         self.clap_enabled_changed.emit(enabled)
         self._save_settings()
 
+    def _on_device_changed(self, index: int) -> None:
+        """Device-Auswahl geändert."""
+        device = self._device_combo.currentData()
+        if device:
+            self.device_changed.emit(str(device))
+            self._save_settings()
+
+    def _on_model_browse(self) -> None:
+        """Öffnet den Datei-Dialog für ein benutzerdefiniertes Modell."""
+        current = self._model_custom_edit.text()
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Spotilyzer-Modell auswählen",
+            current or "",
+            "Joblib-Modell (*.joblib);;Alle Dateien (*)",
+        )
+        if path:
+            self._model_custom_edit.setText(path)
+            self.model_path_changed.emit(path)
+            self._save_settings()
+
+    def _on_model_reset(self) -> None:
+        """Setzt auf automatische Modell-Erkennung zurück."""
+        self._model_custom_edit.clear()
+        self.model_path_changed.emit("")
+        self._save_settings()
+
     def _update_accent_preview(self, hex_color: str) -> None:
         """Aktualisiert die Accent-Vorschau (Button-Hintergrund + Label)."""
         self._accent_btn.setStyleSheet(
@@ -395,6 +459,15 @@ class SettingsPanel(QDockWidget):
         data = self._vram_combo.currentData()
         return str(data) if data else "sequential"
 
+    def get_device(self) -> str:
+        """Gibt das gewählte Device zurück ('auto', 'cuda' oder 'cpu')."""
+        data = self._device_combo.currentData()
+        return str(data) if data else "auto"
+
+    def get_custom_model_path(self) -> str:
+        """Gibt den benutzerdefinierten Modell-Pfad zurück (leer = Auto-Erkennung)."""
+        return self._model_custom_edit.text().strip()
+
     # ── Persistenz (QSettings) ───────────────────────────────────────
 
     def _save_settings(self) -> None:
@@ -428,6 +501,12 @@ class SettingsPanel(QDockWidget):
             "analysis/vram_mode",
             vram_data if vram_data else "sequential"
         )
+        device_data = self._device_combo.currentData()
+        self._settings.setValue(
+            "analysis/device",
+            device_data if device_data else "auto"
+        )
+        self._settings.setValue("model/custom_path", self._model_custom_edit.text())
 
         self._settings.sync()
 
@@ -486,6 +565,15 @@ class SettingsPanel(QDockWidget):
         vram_index = self._vram_combo.findData(str(vram_mode))
         if vram_index >= 0:
             self._vram_combo.setCurrentIndex(vram_index)
+        device_val = self._settings.value("analysis/device", "auto")
+        device_index = self._device_combo.findData(str(device_val))
+        if device_index >= 0:
+            self._device_combo.setCurrentIndex(device_index)
+
+        # Benutzerdefinierter Modell-Pfad
+        custom_model = self._settings.value("model/custom_path", "")
+        if custom_model:
+            self._model_custom_edit.setText(custom_model)
 
     # ── Hilfsfunktionen ──────────────────────────────────────────────
 
