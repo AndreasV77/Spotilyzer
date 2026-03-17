@@ -1,7 +1,7 @@
 """
-MERTEmbedder - Singleton für MERT-v1-95M Audio-Embedding-Extraktion.
+MERTEmbedder - Singleton für MERT-v1-330M Audio-Embedding-Extraktion.
 
-Extrahiert 768-dimensionale Embeddings aus Audio-Dateien.
+Extrahiert 1024-dimensionale Embeddings aus Audio-Dateien.
 Unterstützt CUDA (GPU) und CPU mit automatischer Erkennung.
 
 Quelle: Konsolidiert aus spotilyzer_gui.py (Z.71-128) und analyze_track.py (Z.43-111).
@@ -18,11 +18,12 @@ import torchaudio
 from transformers import AutoModel, AutoProcessor
 
 from spotilyzer import MERT_MODEL_NAME, TARGET_SAMPLE_RATE, MAX_AUDIO_LENGTH_SEC
+from spotilyzer.core._audio_loader import load_audio_file
 
 
 class MERTEmbedder:
     """
-    Singleton: Lädt MERT-v1-95M einmalig, extrahiert 768-dim Embeddings.
+    Singleton: Lädt MERT-v1-330M einmalig, extrahiert 1024-dim Embeddings.
 
     Usage:
         embedder = MERTEmbedder.get_instance(device="cuda")
@@ -77,6 +78,27 @@ class MERTEmbedder:
         """Setzt die Singleton-Instanz zurück (für Tests)."""
         cls._instance = None
 
+    def offload_to_cpu(self) -> None:
+        """
+        Verschiebt Modell auf CPU und leert GPU-Cache.
+        Für sequentiellen VRAM-Modus (MERT + CLAP abwechselnd).
+        """
+        self.model.to("cpu")
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    def restore_to_device(self) -> None:
+        """Verschiebt Modell zurück auf das konfigurierte Device."""
+        self.model.to(self.device)
+
+    def _ensure_on_device(self) -> None:
+        """Stellt sicher dass das Modell auf dem richtigen Device ist (nach offload)."""
+        current = next(self.model.parameters()).device
+        if str(current) != self.device and not (
+            self.device == "cuda" and str(current).startswith("cuda")
+        ):
+            self.model.to(self.device)
+
     def load_audio(self, filepath: Path) -> torch.Tensor:
         """
         Lädt eine Audio-Datei und preprocessed sie für MERT.
@@ -95,7 +117,9 @@ class MERTEmbedder:
             RuntimeError: Wenn die Datei nicht geladen werden kann.
         """
         try:
-            waveform, sample_rate = torchaudio.load(filepath)
+            waveform, sample_rate = load_audio_file(filepath)
+        except RuntimeError:
+            raise
         except Exception as e:
             raise RuntimeError(f"Audio laden fehlgeschlagen: {filepath.name} - {e}")
 
@@ -119,13 +143,13 @@ class MERTEmbedder:
     @torch.no_grad()
     def extract_embedding(self, waveform: torch.Tensor) -> np.ndarray:
         """
-        Extrahiert ein 768-dim Embedding aus einer Waveform.
+        Extrahiert ein 1024-dim Embedding aus einer Waveform.
 
         Args:
             waveform: 1D Tensor (Mono, 24kHz).
 
         Returns:
-            768-dimensionales numpy Array.
+            1024-dimensionales numpy Array.
 
         Raises:
             RuntimeError: Bei Fehler in der Embedding-Extraktion.
@@ -145,16 +169,17 @@ class MERTEmbedder:
 
     def process_file(self, filepath: Path) -> np.ndarray:
         """
-        Komplette Pipeline: Audio-Datei → 768-dim Embedding.
+        Komplette Pipeline: Audio-Datei → 1024-dim Embedding.
 
         Args:
             filepath: Pfad zur Audio-Datei.
 
         Returns:
-            768-dimensionales numpy Array.
+            1024-dimensionales numpy Array.
 
         Raises:
             RuntimeError: Bei Fehler in irgendeinem Schritt.
         """
+        self._ensure_on_device()
         waveform = self.load_audio(filepath)
         return self.extract_embedding(waveform)

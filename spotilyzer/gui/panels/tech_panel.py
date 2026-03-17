@@ -77,6 +77,9 @@ class TechPanel(QDockWidget):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         scroll_content = QWidget()
+        scroll_content.setObjectName("TechScrollContent")
+        scroll_content.setAutoFillBackground(False)
+        scroll_content.setStyleSheet("#TechScrollContent { background-color: transparent; }")
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(8)
@@ -119,7 +122,7 @@ class TechPanel(QDockWidget):
         scroll_layout.addWidget(separator)
 
         # ── Waveform ──
-        waveform_title = QLabel("\U0001f4c8 Waveform")
+        waveform_title = QLabel("Waveform")
         waveform_title.setStyleSheet("font-weight: bold; font-size: 12px;")
         scroll_layout.addWidget(waveform_title)
 
@@ -203,7 +206,7 @@ class TechPanel(QDockWidget):
         self._current_result = result
 
         # Track-Info
-        self._track_label.setText(f"\U0001f3b5 {result.file}")
+        self._track_label.setText(result.file)
 
         if result.is_error:
             self._rating_label.setText(f"\u274c Fehler: {result.error}")
@@ -216,13 +219,11 @@ class TechPanel(QDockWidget):
 
         # Rating-Zeile
         rating_colors = {"hit": "#22c55e", "mid": "#eab308", "flop": "#ef4444"}
-        rating_emojis = {"hit": "\U0001f525", "mid": "\u2796", "flop": "\U0001f480"}
         color = rating_colors.get(result.rating, "#a5a5a5")
-        emoji = rating_emojis.get(result.rating, "?")
         hit_pct = result.probabilities.get("hit", 0.0)
 
         self._rating_label.setText(
-            f"{emoji} {result.rating.upper()} | "
+            f"{result.rating.upper()} | "
             f"Hit: {hit_pct:.1%} | "
             f"Konfidenz: {result.confidence:.1%}"
         )

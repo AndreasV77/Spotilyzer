@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torchaudio
 
+from spotilyzer.core._audio_loader import load_audio_file
 from spotilyzer.data.models import AudioInfo
 
 
@@ -32,22 +33,18 @@ def extract_audio_info(filepath: Path) -> AudioInfo:
     """
     path = Path(filepath)
 
-    # Basis-Info via torchaudio.info() (schnell, kein Laden nötig)
+    # Basis-Info via soundfile.info() (schnell, kein torchcodec nötig)
     try:
-        info = torchaudio.info(path)
-        duration_sec = info.num_frames / info.sample_rate if info.sample_rate > 0 else 0.0
-        sample_rate = info.sample_rate
-        channels = info.num_channels
-        # Bitrate: bits_per_sample * sample_rate * channels / 1000
-        # Für komprimierte Formate (MP3) ist bits_per_sample oft 0
-        if info.bits_per_sample > 0:
-            bitrate = int(info.bits_per_sample * info.sample_rate * info.num_channels / 1000)
+        import soundfile as sf
+        info = sf.info(str(path))
+        duration_sec = info.duration
+        sample_rate = info.samplerate
+        channels = info.channels
+        # Bitrate aus Dateigröße und Dauer schätzen (soundfile liefert kein bitrate)
+        if duration_sec > 0:
+            bitrate = int(path.stat().st_size * 8 / duration_sec / 1000)
         else:
-            # Schätze aus Dateigröße und Dauer
-            if duration_sec > 0:
-                bitrate = int(path.stat().st_size * 8 / duration_sec / 1000)
-            else:
-                bitrate = None
+            bitrate = None
     except Exception:
         duration_sec = 0.0
         sample_rate = 0
@@ -65,7 +62,7 @@ def extract_audio_info(filepath: Path) -> AudioInfo:
     energy = None
 
     try:
-        waveform, sr = torchaudio.load(path)
+        waveform, sr = load_audio_file(path)
 
         # Mono für Analyse
         if waveform.shape[0] > 1:
@@ -158,6 +155,12 @@ def _estimate_bpm(waveform: torch.Tensor, sample_rate: int) -> Optional[float]:
 
         if best_lag > 0:
             bpm = float(fps * 60 / best_lag)
+            # Oktavfehler-Korrektur: >150 BPM auf halbe Periode prüfen
+            # (Autocorrelation findet oft doppeltes Tempo bei langsamen Tracks)
+            if bpm > 150:
+                half = bpm / 2
+                if 40 <= half <= 150:
+                    bpm = half
             # Plausibilitätscheck
             if 40 <= bpm <= 240:
                 return round(bpm, 1)
@@ -169,32 +172,39 @@ def _estimate_bpm(waveform: torch.Tensor, sample_rate: int) -> Optional[float]:
 
 def _estimate_lufs(waveform: torch.Tensor, sample_rate: int) -> Optional[float]:
     """
-    Schätzt Integrated LUFS (vereinfachte EBU R128 Implementierung).
+    Misst Integrated LUFS nach EBU R128 via pyloudnorm.
 
-    Berechnet den RMS-Pegel und konvertiert in LUFS-Skala.
-    Volle EBU R128 Implementierung würde K-Weighting und Gating erfordern.
+    Volle Implementierung: K-Weighting + 400ms-Block-Gating.
+    Fallback auf RMS-Approximation falls pyloudnorm nicht verfügbar.
     """
     try:
-        # RMS über den gesamten Track
-        rms = torch.sqrt(torch.mean(waveform ** 2))
+        import pyloudnorm as pyln
 
-        if rms < 1e-10:
-            return -70.0  # Stille
+        # pyloudnorm erwartet numpy float64, shape: (samples,) oder (samples, channels)
+        data = waveform.numpy().astype(np.float64)
+        if data.ndim == 1:
+            data = data[:, np.newaxis]  # (samples, 1)
+        else:
+            data = data.T  # (samples, channels) — waveform ist (channels, samples)
 
-        # dBFS
-        db_fs = 20 * math.log10(float(rms))
+        meter = pyln.Meter(sample_rate)  # EBU R128
+        lufs = meter.integrated_loudness(data)
 
-        # Approximation: LUFS ≈ dBFS für normalisiertes Audio
-        # (Echte LUFS braucht K-Weighting Filter, dies ist eine Annäherung)
-        lufs = db_fs
+        # pyloudnorm gibt -inf für Stille zurück
+        if not np.isfinite(lufs):
+            return -70.0
 
-        # Plausibilitätscheck
-        if lufs < -70:
-            lufs = -70.0
-
-        return round(lufs, 1)
+        return round(float(lufs), 1)
     except Exception:
-        return None
+        # Fallback: RMS → dBFS
+        try:
+            rms = float(torch.sqrt(torch.mean(waveform ** 2)))
+            if rms < 1e-10:
+                return -70.0
+            lufs = max(20 * math.log10(rms), -70.0)
+            return round(lufs, 1)
+        except Exception:
+            return None
 
 
 def _estimate_key(waveform: torch.Tensor, sample_rate: int) -> Optional[str]:
@@ -301,7 +311,7 @@ def extract_waveform_display(
         oder None bei Fehler.
     """
     try:
-        waveform, sr = torchaudio.load(filepath)
+        waveform, sr = load_audio_file(filepath)
 
         # Mono
         if waveform.shape[0] > 1:

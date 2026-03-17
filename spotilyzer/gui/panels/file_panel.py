@@ -73,7 +73,7 @@ class FilePanel(QDockWidget):
         self._btn_up.clicked.connect(self._on_navigate_up)
         nav_bar.addWidget(self._btn_up)
 
-        self._btn_home = QPushButton("\U0001f3e0")
+        self._btn_home = QPushButton("~")
         self._btn_home.setToolTip("Home-Verzeichnis")
         self._btn_home.setFixedSize(28, 28)
         self._btn_home.clicked.connect(self._on_navigate_home)

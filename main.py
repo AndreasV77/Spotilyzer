@@ -15,6 +15,13 @@ project_root = Path(__file__).parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+# .env laden (HF_TOKEN u. a.) — optional, kein Fehler wenn nicht vorhanden
+try:
+    from dotenv import load_dotenv
+    load_dotenv(project_root / ".env")
+except ImportError:
+    pass  # python-dotenv nicht installiert — Umgebungsvariablen aus dem System nutzen
+
 
 def main():
     """Startet die Spotilyzer GUI."""

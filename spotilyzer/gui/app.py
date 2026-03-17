@@ -66,8 +66,8 @@ class SpotilyzerApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle(f"Spotilyzer v{__version__}")
-        self.setMinimumSize(900, 600)
-        self.resize(1280, 800)
+        self.setMinimumSize(1100, 720)
+        self.resize(1600, 960)
 
         # State
         self._pipeline = None  # wird async geladen
@@ -172,6 +172,17 @@ class SpotilyzerApp(QMainWindow):
         # Technik als aktiven Tab setzen (rechts)
         self._tech_panel.raise_()
 
+        # Initiale Dock-Größen (nur beim ersten Start, danach via QSettings)
+        self.resizeDocks(
+            [self._file_panel], [260], Qt.Orientation.Horizontal
+        )
+        self.resizeDocks(
+            [self._tech_panel], [340], Qt.Orientation.Horizontal
+        )
+        self.resizeDocks(
+            [self._highscore_panel], [280], Qt.Orientation.Vertical
+        )
+
     def _create_toolbar(self) -> None:
         """Erstellt die Toolbar."""
         self._toolbar = QToolBar("Werkzeuge")
@@ -181,7 +192,7 @@ class SpotilyzerApp(QMainWindow):
         self.addToolBar(self._toolbar)
 
         # Ordner öffnen
-        self._action_open = QAction("\U0001f4c2 Öffnen", self)
+        self._action_open = QAction("Öffnen", self)
         self._action_open.setShortcut(QKeySequence.StandardKey.Open)
         self._action_open.setToolTip("Audio-Dateien zum Analysieren auswählen")
         self._action_open.triggered.connect(self._on_open_files)
@@ -190,13 +201,13 @@ class SpotilyzerApp(QMainWindow):
         self._toolbar.addSeparator()
 
         # Export
-        self._action_export = QAction("\U0001f4be Export", self)
+        self._action_export = QAction("Export", self)
         self._action_export.setToolTip("Ergebnisse exportieren")
         self._action_export.triggered.connect(self._on_export)
         self._toolbar.addAction(self._action_export)
 
         # Clear
-        self._action_clear = QAction("\U0001f5d1\ufe0f Clear", self)
+        self._action_clear = QAction("Clear", self)
         self._action_clear.setToolTip("Alle Ergebnisse löschen")
         self._action_clear.triggered.connect(self._on_clear)
         self._toolbar.addAction(self._action_clear)
@@ -204,14 +215,14 @@ class SpotilyzerApp(QMainWindow):
         self._toolbar.addSeparator()
 
         # View-Modi
-        self._action_simple = QAction("\U0001f7e2 Simpel", self)
+        self._action_simple = QAction("Simpel", self)
         self._action_simple.setToolTip("Einfache Ansicht — nur Rating + Ergebnisse")
         self._action_simple.triggered.connect(
             lambda: self._set_app_mode(AppMode.SIMPLE)
         )
         self._toolbar.addAction(self._action_simple)
 
-        self._action_balanced = QAction("\U0001f535 Ausgewogen", self)
+        self._action_balanced = QAction("Ausgewogen", self)
         self._action_balanced.setToolTip(
             "Ausgewogene Ansicht — Rating + Audio-Info"
         )
@@ -220,7 +231,7 @@ class SpotilyzerApp(QMainWindow):
         )
         self._toolbar.addAction(self._action_balanced)
 
-        self._action_pro = QAction("\U0001f534 Profi", self)
+        self._action_pro = QAction("Profi", self)
         self._action_pro.setToolTip("Profi-Ansicht — alle Felder + Dock-Panels")
         self._action_pro.triggered.connect(
             lambda: self._set_app_mode(AppMode.PRO)
@@ -305,6 +316,8 @@ class SpotilyzerApp(QMainWindow):
         self._settings_panel.theme_changed.connect(self._on_theme_changed)
         self._settings_panel.accent_changed.connect(self._on_accent_changed)
         self._settings_panel.home_dir_changed.connect(self.set_home_dir)
+        self._settings_panel.device_changed.connect(self._on_device_changed)
+        self._settings_panel.model_path_changed.connect(self._on_model_path_changed)
 
     # ── Pipeline-Initialisierung ─────────────────────────────────────
 
@@ -318,17 +331,25 @@ class SpotilyzerApp(QMainWindow):
             )
             return
 
-        self._central.set_status("\u2728 Initialisiere ML-Pipeline...")
+        self._central.set_status("Initialisiere ML-Pipeline...")
         self._settings_panel.set_model_path(str(model_path))
 
-        self._init_worker = PipelineInitWorker(model_path, parent=self)
+        device = self._settings_panel.get_device()
+        self._init_worker = PipelineInitWorker(model_path, device=device, parent=self)
         self._init_worker.progress.connect(self._on_init_progress)
         self._init_worker.ready.connect(self._on_pipeline_ready)
         self._init_worker.error.connect(self._on_pipeline_error)
         self._init_worker.start()
 
     def _find_model_path(self) -> Optional[Path]:
-        """Sucht das Modell in bekannten Pfaden."""
+        """Sucht das Modell — zuerst benutzerdefinierter Pfad, dann Auto-Erkennung."""
+        # Benutzerdefinierter Pfad hat Vorrang
+        custom = self._settings_panel.get_custom_model_path()
+        if custom:
+            p = Path(custom)
+            if p.exists():
+                return p
+
         candidates = [
             Path("models/spotilyzer_model.joblib"),
             Path(__file__).parent.parent.parent / "models" / "spotilyzer_model.joblib",
@@ -346,7 +367,7 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_init_progress(self, message: str) -> None:
         """Pipeline-Initialisierung: Status-Update."""
-        self._central.set_status(f"\u2728 {message}")
+        self._central.set_status(message)
         self._statusbar.showMessage(message, 5000)
 
     def _on_pipeline_ready(self, pipeline) -> None:
@@ -377,6 +398,23 @@ class SpotilyzerApp(QMainWindow):
             f"Die ML-Pipeline konnte nicht initialisiert werden:\n\n{error_msg}",
         )
 
+    def _on_device_changed(self, device: str) -> None:
+        """Device-Auswahl geändert — Pipeline neu initialisieren."""
+        from spotilyzer.core.embedder import MERTEmbedder
+        MERTEmbedder.reset_instance()
+        self._pipeline = None
+        self._central.set_status(f"Device auf '{device}' geändert — lade Pipeline neu...")
+        self._init_pipeline()
+
+    def _on_model_path_changed(self, path: str) -> None:
+        """Benutzerdefinierter Modell-Pfad geändert — Pipeline neu initialisieren."""
+        from spotilyzer.core.embedder import MERTEmbedder
+        MERTEmbedder.reset_instance()
+        self._pipeline = None
+        label = Path(path).name if path else "Auto-Erkennung"
+        self._central.set_status(f"Modell geändert ({label}) — lade Pipeline neu...")
+        self._init_pipeline()
+
     # ── Analyse ──────────────────────────────────────────────────────
 
     def _on_files_selected(self, files: list[str]) -> None:
@@ -406,12 +444,16 @@ class SpotilyzerApp(QMainWindow):
         self._progress_bar.setValue(0)
 
         include_waveform = self._app_mode in (AppMode.BALANCED, AppMode.PRO)
+        include_clap = self._settings_panel.get_clap_enabled()
+        vram_mode = self._settings_panel.get_vram_mode()
 
         self._worker = AnalysisWorker(
             pipeline=self._pipeline,
             files=files,
             include_audio_info=True,
             include_waveform=include_waveform,
+            include_clap=include_clap,
+            vram_mode=vram_mode,
             parent=self,
         )
         self._worker.progress.connect(self._on_analysis_progress)
@@ -423,7 +465,7 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_analysis_progress(self, message: str) -> None:
         """Analyse: Status-Update."""
-        self._central.set_status(f"\u23f3 {message}")
+        self._central.set_status(message)
         self._statusbar.showMessage(message, 3000)
 
     def _on_result_ready(self, result: AnalysisResult) -> None:
@@ -462,7 +504,7 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_analysis_error(self, error_msg: str) -> None:
         """Analyse-Fehler für einzelnen Track."""
-        self._statusbar.showMessage(f"\u26a0\ufe0f {error_msg}", 5000)
+        self._statusbar.showMessage(f"Fehler: {error_msg}", 5000)
 
     # ── Waveform-Loading ─────────────────────────────────────────────
 
@@ -497,6 +539,10 @@ class SpotilyzerApp(QMainWindow):
         self._tech_panel.set_result(result)
         self._tech_panel.show()
         self._tech_panel.raise_()
+
+        # Waveform nachladen falls nicht enthalten (z. B. nach JSON-Import)
+        if result._waveform is None and not result.is_error:
+            self._start_waveform_load(result)
 
     # ── View-Modi ────────────────────────────────────────────────────
 
@@ -686,7 +732,7 @@ class SpotilyzerApp(QMainWindow):
         self._highscore_panel.set_results([])
         self._history_panel.set_results([])
         self._tech_panel.clear()
-        self._central.set_status("\U0001f5d1\ufe0f Ergebnisse gelöscht")
+        self._central.set_status("Ergebnisse gelöscht")
 
     # ── Persistenz ───────────────────────────────────────────────────
 
@@ -791,7 +837,7 @@ class SpotilyzerApp(QMainWindow):
         QMessageBox.about(
             self,
             "Über Spotilyzer",
-            f"\U0001f3b5 Spotilyzer v{__version__}\n\n"
+            f"Spotilyzer v{__version__}\n\n"
             f"Hit/Mid/Flop Analyzer\n"
             f"Bewertet die Mainstream-Kompatibilität von Audio-Tracks.\n\n"
             f"ML-Pipeline: MERT-v1-95M + XGBoost\n"
