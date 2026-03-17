@@ -157,6 +157,7 @@ class AnalysisResult:
     probabilities: dict = field(default_factory=dict)  # {"hit": 0.85, "mid": 0.10, "flop": 0.05}
     audio_info: Optional[AudioInfo] = None
     model_info: Optional[ModelInfo] = None  # Modell-/Datensatz-Info für Vergleichbarkeit
+    clap_result: Optional["CLAPResult"] = None  # Zero-Shot Genre/Mood (optional, nur wenn aktiviert)
     error: Optional[str] = None          # Fehlermeldung wenn Analyse fehlschlug
 
     # Nicht persistiert (nur für aktive GUI-Session)
@@ -195,6 +196,8 @@ class AnalysisResult:
                 d["audio_info"] = self.audio_info.to_dict()
             if self.model_info:
                 d["model_info"] = self.model_info.to_dict()
+            if self.clap_result:
+                d["clap_result"] = self.clap_result.to_dict()
         return d
 
     @classmethod
@@ -229,6 +232,10 @@ class AnalysisResult:
                 dataset_info=mi.get("dataset_info"),
             )
 
+        clap_result = None
+        if "clap_result" in data and data["clap_result"]:
+            clap_result = CLAPResult.from_dict(data["clap_result"])
+
         return cls(
             file=data.get("file", ""),
             path=data.get("path", ""),
@@ -238,7 +245,52 @@ class AnalysisResult:
             probabilities=data.get("probabilities", {}),
             audio_info=audio_info,
             model_info=model_info,
+            clap_result=clap_result,
             error=data.get("error"),
+        )
+
+
+@dataclass
+class CLAPResult:
+    """Zero-Shot Genre/Mood-Klassifikation via LAION CLAP."""
+
+    # Scores pro Tag-Set: {"genre": {"metal": 0.42, "pop": 0.18, ...}, "mood": {...}}
+    tag_scores: dict = field(default_factory=dict)
+    # Top-N Tags über alle Sets (absteigend nach Score sortiert)
+    top_tags: list = field(default_factory=list)
+
+    @property
+    def genre_scores(self) -> dict:
+        return self.tag_scores.get("genre", {})
+
+    @property
+    def mood_scores(self) -> dict:
+        return self.tag_scores.get("mood", {})
+
+    def top_genre(self) -> Optional[str]:
+        """Wahrscheinlichstes Genre oder None wenn keine Genre-Scores vorhanden."""
+        scores = self.genre_scores
+        return max(scores, key=scores.get) if scores else None
+
+    def top_mood(self) -> Optional[str]:
+        """Wahrscheinlichste Stimmung oder None wenn keine Mood-Scores vorhanden."""
+        scores = self.mood_scores
+        return max(scores, key=scores.get) if scores else None
+
+    def to_dict(self) -> dict:
+        return {
+            "tag_scores": {
+                set_name: {tag: round(score, 4) for tag, score in tags.items()}
+                for set_name, tags in self.tag_scores.items()
+            },
+            "top_tags": self.top_tags,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "CLAPResult":
+        return cls(
+            tag_scores=data.get("tag_scores", {}),
+            top_tags=data.get("top_tags", []),
         )
 
 

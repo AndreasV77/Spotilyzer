@@ -49,10 +49,13 @@ class SettingsPanel(QDockWidget):
         accent_changed(str):      Accent-Farbe wurde geändert (Hex-String).
     """
 
-    mode_changed = Signal(object)    # AppMode
-    theme_changed = Signal(object)   # ThemeMode
-    accent_changed = Signal(str)     # Hex-Farbcode
-    home_dir_changed = Signal(str)   # Startordner (leer = deaktiviert)
+    mode_changed = Signal(object)        # AppMode
+    theme_changed = Signal(object)       # ThemeMode
+    accent_changed = Signal(str)         # Hex-Farbcode
+    home_dir_changed = Signal(str)       # Startordner (leer = deaktiviert)
+    clap_enabled_changed = Signal(bool)  # CLAP ein/aus
+    device_changed = Signal(str)         # Device-Auswahl ("auto", "cuda", "cpu")
+    model_path_changed = Signal(str)     # Modell-Pfad (leer = Auto-Erkennung)
 
     # QSettings Organisation
     _SETTINGS_ORG = "Spotilyzer"
@@ -85,6 +88,9 @@ class SettingsPanel(QDockWidget):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         scroll_content = QWidget()
+        scroll_content.setObjectName("SettingsScrollContent")
+        scroll_content.setAutoFillBackground(False)
+        scroll_content.setStyleSheet("#SettingsScrollContent { background-color: transparent; }")
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(10)
@@ -92,7 +98,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Ansichts-Modus
         # ══════════════════════════════════════════════════════════════
-        mode_group = QGroupBox("\U0001f4cb Ansicht")
+        mode_group = QGroupBox("Ansicht")
         mode_layout = QFormLayout(mode_group)
         mode_layout.setSpacing(6)
 
@@ -114,7 +120,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Theme
         # ══════════════════════════════════════════════════════════════
-        theme_group = QGroupBox("\U0001f3a8 Theme")
+        theme_group = QGroupBox("Theme")
         theme_layout = QFormLayout(theme_group)
         theme_layout.setSpacing(6)
 
@@ -142,7 +148,7 @@ class SettingsPanel(QDockWidget):
         accent_row.addStretch()
 
         self._accent_reset_btn = QPushButton("Reset")
-        self._accent_reset_btn.setFixedWidth(50)
+        self._accent_reset_btn.setFixedWidth(72)
         self._accent_reset_btn.setToolTip("Accent-Farbe auf Standard zurücksetzen")
         self._accent_reset_btn.clicked.connect(self._on_accent_reset)
         accent_row.addWidget(self._accent_reset_btn)
@@ -154,16 +160,28 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Gerät / System
         # ══════════════════════════════════════════════════════════════
-        device_group = QGroupBox("\U0001f4bb System")
+        device_group = QGroupBox("System")
         device_layout = QFormLayout(device_group)
         device_layout.setSpacing(4)
+
+        # Device-Auswahl (CPU/GPU)
+        self._device_combo = QComboBox()
+        self._device_combo.addItem("Auto (CUDA bevorzugt)", "auto")
+        self._device_combo.addItem("GPU (CUDA)", "cuda")
+        self._device_combo.addItem("CPU", "cpu")
+        self._device_combo.setToolTip(
+            "Änderung wird nach Neustart der Pipeline wirksam"
+        )
+        self._device_combo.currentIndexChanged.connect(self._on_device_changed)
+        device_layout.addRow("Device:", self._device_combo)
 
         self._device_label = QLabel(self._detect_device_info())
         self._device_label.setWordWrap(True)
         self._device_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        device_layout.addRow("Device:", self._device_label)
+        self._device_label.setObjectName("MutedLabel")
+        device_layout.addRow("Aktiv:", self._device_label)
 
         self._model_path_label = QLabel("spotilyzer_model.joblib")
         self._model_path_label.setWordWrap(True)
@@ -171,14 +189,37 @@ class SettingsPanel(QDockWidget):
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
         self._model_path_label.setObjectName("MutedLabel")
-        device_layout.addRow("Modell:", self._model_path_label)
+        device_layout.addRow("Geladen:", self._model_path_label)
+
+        # Modell-Dateipicker (benutzerdefinierter Pfad)
+        self._model_custom_edit = QLineEdit()
+        self._model_custom_edit.setReadOnly(True)
+        self._model_custom_edit.setPlaceholderText("Auto-Erkennung...")
+        self._model_custom_edit.setToolTip(
+            "Benutzerdefiniertes Modell (.joblib)\n"
+            "Leer = Auto-Erkennung (models/spotilyzer_model.joblib)"
+        )
+        device_layout.addRow("Modell:", self._model_custom_edit)
+
+        model_btn_row = QHBoxLayout()
+        self._model_browse_btn = QPushButton("Durchsuchen...")
+        self._model_browse_btn.clicked.connect(self._on_model_browse)
+        model_btn_row.addWidget(self._model_browse_btn)
+
+        self._model_reset_btn = QPushButton("Auto")
+        self._model_reset_btn.setFixedWidth(56)
+        self._model_reset_btn.setToolTip("Auf automatische Modell-Erkennung zurücksetzen")
+        self._model_reset_btn.clicked.connect(self._on_model_reset)
+        model_btn_row.addWidget(self._model_reset_btn)
+        model_btn_row.addStretch()
+        device_layout.addRow("", model_btn_row)
 
         scroll_layout.addWidget(device_group)
 
         # ══════════════════════════════════════════════════════════════
         # Export-Defaults
         # ══════════════════════════════════════════════════════════════
-        export_group = QGroupBox("\U0001f4be Export-Defaults")
+        export_group = QGroupBox("Export-Defaults")
         export_layout = QVBoxLayout(export_group)
         export_layout.setSpacing(4)
 
@@ -207,7 +248,7 @@ class SettingsPanel(QDockWidget):
         # ══════════════════════════════════════════════════════════════
         # Dateien
         # ══════════════════════════════════════════════════════════════
-        files_group = QGroupBox("\U0001f4c1 Dateien")
+        files_group = QGroupBox("Dateien")
         files_layout = QVBoxLayout(files_group)
         files_layout.setSpacing(6)
 
@@ -237,6 +278,39 @@ class SettingsPanel(QDockWidget):
         files_layout.addWidget(home_dir_hint)
 
         scroll_layout.addWidget(files_group)
+
+        # ══════════════════════════════════════════════════════════════
+        # CLAP-Analyse
+        # ══════════════════════════════════════════════════════════════
+        clap_group = QGroupBox("CLAP Genre/Mood")
+        clap_layout = QVBoxLayout(clap_group)
+        clap_layout.setSpacing(6)
+
+        self._chk_clap = QCheckBox("Genre- und Mood-Tags einbeziehen")
+        self._chk_clap.setChecked(False)
+        self._chk_clap.stateChanged.connect(self._on_clap_toggled)
+        clap_layout.addWidget(self._chk_clap)
+
+        clap_hint = QLabel(
+            "Zero-Shot-Klassifikation via LAION CLAP.\n"
+            "~776 MB Download beim ersten Start.\n"
+            "Verlangsamt die Analyse um ~2–5 s/Track."
+        )
+        clap_hint.setObjectName("MutedLabel")
+        clap_hint.setWordWrap(True)
+        clap_layout.addWidget(clap_hint)
+
+        # VRAM-Modus (relevant für GPUs ≤ 6 GB)
+        vram_form = QFormLayout()
+        vram_form.setSpacing(4)
+        self._vram_combo = QComboBox()
+        self._vram_combo.addItem("Sequenziell (≤ 6 GB VRAM)", "sequential")
+        self._vram_combo.addItem("Gleichzeitig (> 6 GB VRAM)", "concurrent")
+        self._vram_combo.currentIndexChanged.connect(self._save_settings)
+        vram_form.addRow("VRAM-Modus:", self._vram_combo)
+        clap_layout.addLayout(vram_form)
+
+        scroll_layout.addWidget(clap_group)
 
         # ── Stretch am Ende ──
         scroll_layout.addStretch()
@@ -303,6 +377,39 @@ class SettingsPanel(QDockWidget):
         self.home_dir_changed.emit("")
         self._save_settings()
 
+    def _on_clap_toggled(self, state: int) -> None:
+        """CLAP-Checkbox geändert."""
+        enabled = bool(state)
+        self.clap_enabled_changed.emit(enabled)
+        self._save_settings()
+
+    def _on_device_changed(self, index: int) -> None:
+        """Device-Auswahl geändert."""
+        device = self._device_combo.currentData()
+        if device:
+            self.device_changed.emit(str(device))
+            self._save_settings()
+
+    def _on_model_browse(self) -> None:
+        """Öffnet den Datei-Dialog für ein benutzerdefiniertes Modell."""
+        current = self._model_custom_edit.text()
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Spotilyzer-Modell auswählen",
+            current or "",
+            "Joblib-Modell (*.joblib);;Alle Dateien (*)",
+        )
+        if path:
+            self._model_custom_edit.setText(path)
+            self.model_path_changed.emit(path)
+            self._save_settings()
+
+    def _on_model_reset(self) -> None:
+        """Setzt auf automatische Modell-Erkennung zurück."""
+        self._model_custom_edit.clear()
+        self.model_path_changed.emit("")
+        self._save_settings()
+
     def _update_accent_preview(self, hex_color: str) -> None:
         """Aktualisiert die Accent-Vorschau (Button-Hintergrund + Label)."""
         self._accent_btn.setStyleSheet(
@@ -343,6 +450,24 @@ class SettingsPanel(QDockWidget):
         """Gibt die aktuelle Accent-Farbe als Hex-String zurück."""
         return self._accent_label.text()
 
+    def get_clap_enabled(self) -> bool:
+        """Gibt zurück ob CLAP-Analyse aktiviert ist."""
+        return self._chk_clap.isChecked()
+
+    def get_vram_mode(self) -> str:
+        """Gibt den gewählten VRAM-Modus zurück ('sequential' oder 'concurrent')."""
+        data = self._vram_combo.currentData()
+        return str(data) if data else "sequential"
+
+    def get_device(self) -> str:
+        """Gibt das gewählte Device zurück ('auto', 'cuda' oder 'cpu')."""
+        data = self._device_combo.currentData()
+        return str(data) if data else "auto"
+
+    def get_custom_model_path(self) -> str:
+        """Gibt den benutzerdefinierten Modell-Pfad zurück (leer = Auto-Erkennung)."""
+        return self._model_custom_edit.text().strip()
+
     # ── Persistenz (QSettings) ───────────────────────────────────────
 
     def _save_settings(self) -> None:
@@ -368,6 +493,20 @@ class SettingsPanel(QDockWidget):
 
         # Dateien
         self._settings.setValue("files/home_dir", self._home_dir_edit.text())
+
+        # CLAP
+        self._settings.setValue("analysis/clap_enabled", self._chk_clap.isChecked())
+        vram_data = self._vram_combo.currentData()
+        self._settings.setValue(
+            "analysis/vram_mode",
+            vram_data if vram_data else "sequential"
+        )
+        device_data = self._device_combo.currentData()
+        self._settings.setValue(
+            "analysis/device",
+            device_data if device_data else "auto"
+        )
+        self._settings.setValue("model/custom_path", self._model_custom_edit.text())
 
         self._settings.sync()
 
@@ -418,6 +557,23 @@ class SettingsPanel(QDockWidget):
         home_dir = self._settings.value("files/home_dir", "")
         if home_dir:
             self._home_dir_edit.setText(home_dir)
+
+        # CLAP
+        clap_enabled = self._settings.value("analysis/clap_enabled", False, type=bool)
+        self._chk_clap.setChecked(clap_enabled)
+        vram_mode = self._settings.value("analysis/vram_mode", "sequential")
+        vram_index = self._vram_combo.findData(str(vram_mode))
+        if vram_index >= 0:
+            self._vram_combo.setCurrentIndex(vram_index)
+        device_val = self._settings.value("analysis/device", "auto")
+        device_index = self._device_combo.findData(str(device_val))
+        if device_index >= 0:
+            self._device_combo.setCurrentIndex(device_index)
+
+        # Benutzerdefinierter Modell-Pfad
+        custom_model = self._settings.value("model/custom_path", "")
+        if custom_model:
+            self._model_custom_edit.setText(custom_model)
 
     # ── Hilfsfunktionen ──────────────────────────────────────────────
 

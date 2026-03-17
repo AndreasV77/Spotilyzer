@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
 )
 
-from spotilyzer.data.models import AnalysisResult, MEDALS
+from spotilyzer.data.models import AnalysisResult
 
 
 class HighscorePanel(QDockWidget):
@@ -46,6 +46,9 @@ class HighscorePanel(QDockWidget):
         "flop": QColor("#ef4444"),
     }
 
+    # Rang-Farben Top 3 (kein Emoji)
+    RANK_COLORS = {0: QColor("#FFD700"), 1: QColor("#B8B8B8"), 2: QColor("#CD7F32")}
+
     def __init__(self, parent=None):
         super().__init__("Highscore", parent)
         self.setObjectName("HighscorePanel")
@@ -68,7 +71,7 @@ class HighscorePanel(QDockWidget):
 
         # ── Titel-Zeile ──
         header_layout = QVBoxLayout()
-        self._title_label = QLabel("\U0001f3c6 Ranking")
+        self._title_label = QLabel("Ranking")
         self._title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         header_layout.addWidget(self._title_label)
 
@@ -168,12 +171,14 @@ class HighscorePanel(QDockWidget):
         flop_pct = probs.get("flop", 0.0)
 
         rating_color = self.RATING_COLORS.get(result.rating, QColor("#a5a5a5"))
-        medal = MEDALS.get(rank, "")
 
-        # Rang
-        rank_item = QStandardItem(medal if medal else str(rank + 1))
+        # Rang (kein Emoji — farbiger Text statt Medaillen)
+        rank_item = QStandardItem(f"#{rank + 1}")
         rank_item.setData(rank, Qt.ItemDataRole.UserRole)  # Numerisch sortierbar
         rank_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        rank_color = self.RANK_COLORS.get(rank)
+        if rank_color:
+            rank_item.setForeground(rank_color)
 
         # Dateiname
         file_item = QStandardItem(result.file)

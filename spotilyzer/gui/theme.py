@@ -549,9 +549,10 @@ QGroupBox {{
 QGroupBox::title {{
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 2px 8px;
+    left: 8px;
+    padding: 0 4px;
     color: {c.text_muted};
-    background-color: {c.bg_primary};
+    background-color: transparent;
 }}
 
 /* ── CheckBox & RadioButton ─────────────────────────────────────── */
@@ -622,6 +623,45 @@ QListWidget::item:selected {{
 
 QListWidget::item:hover {{
     background-color: {c.bg_secondary};
+}}
+
+/* ── TreeView (FilePanel) ────────────────────────────────────────── */
+QTreeView {{
+    background-color: {c.bg_primary};
+    alternate-background-color: {c.bg_alt};
+    border: 1px solid {c.border};
+    outline: none;
+    selection-background-color: {c.selection};
+}}
+
+QTreeView::item {{
+    padding: 3px 4px;
+    color: {c.text_normal};
+}}
+
+QTreeView::item:selected {{
+    background-color: {c.selection};
+    color: {c.text_normal};
+}}
+
+QTreeView::item:hover {{
+    background-color: {c.bg_secondary};
+}}
+
+QTreeView QHeaderView::section {{
+    background-color: {c.bg_alt};
+    color: {c.text_normal};
+    padding: 4px 6px;
+    border: none;
+    border-bottom: 1px solid {c.border};
+    font-size: 11px;
+}}
+
+/* ── Separator-Linien ───────────────────────────────────────────── */
+QFrame[frameShape="4"],
+QFrame[frameShape="5"] {{
+    color: {c.border};
+    background-color: {c.border};
 }}
 
 /* ── Waveform-Widget ────────────────────────────────────────────── */

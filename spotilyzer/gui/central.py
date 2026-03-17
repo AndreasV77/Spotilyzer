@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -46,11 +46,11 @@ class CentralWidget(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
         # ── Titel ──
-        self._title_label = QLabel("\U0001f3b5 SPOTILYZER")
+        self._title_label = QLabel("SPOTILYZER")
         self._title_label.setObjectName("TitleLabel")
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._title_label)
@@ -61,14 +61,14 @@ class CentralWidget(QWidget):
         layout.addWidget(self._subtitle_label)
 
         # ── Status ──
-        self._status_label = QLabel("\u2728 Initialisiere...")
+        self._status_label = QLabel("Initialisiere...")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._status_label)
 
         # ── DropZone ──
         self._dropzone = DropZone()
         self._dropzone.files_dropped.connect(self.files_selected.emit)
-        self._dropzone.mousePressEvent = self._on_dropzone_click
+        self._dropzone.browse_requested.connect(self._on_browse)
         layout.addWidget(self._dropzone)
 
         # ── Toolbar: Sortierung + Buttons ──
@@ -80,21 +80,21 @@ class CentralWidget(QWidget):
         toolbar.addWidget(sort_label)
 
         self._sort_buttons = {}
-        for mode, (text, icon) in [
-            (SortMode.SCORE, ("Hit-Score", "\U0001f3c6")),
-            (SortMode.TIME, ("Zuletzt", "\U0001f550")),
-            (SortMode.NAME, ("Name", "\U0001f4dd")),
+        for mode, text in [
+            (SortMode.SCORE, "Hit-Score"),
+            (SortMode.TIME, "Zuletzt"),
+            (SortMode.NAME, "Name"),
         ]:
-            btn = QPushButton(f"{icon} {text}")
-            btn.setFixedHeight(28)
+            btn = QPushButton(text)
+            btn.setFixedHeight(32)
             btn.clicked.connect(lambda checked, m=mode: self.set_sort_mode(m))
             toolbar.addWidget(btn)
             self._sort_buttons[mode] = btn
 
         toolbar.addStretch()
 
-        self._clear_btn = QPushButton("\U0001f5d1\ufe0f Clear")
-        self._clear_btn.setFixedHeight(28)
+        self._clear_btn = QPushButton("Clear")
+        self._clear_btn.setFixedHeight(32)
         self._clear_btn.clicked.connect(self._on_clear)
         toolbar.addWidget(self._clear_btn)
 
@@ -119,6 +119,9 @@ class CentralWidget(QWidget):
         )
 
         self._results_container = QWidget()
+        self._results_container.setObjectName("ResultsContainer")
+        self._results_container.setAutoFillBackground(False)
+        self._results_container.setStyleSheet("#ResultsContainer { background-color: transparent; }")
         self._results_layout = QVBoxLayout(self._results_container)
         self._results_layout.setContentsMargins(0, 0, 0, 0)
         self._results_layout.setSpacing(4)
@@ -203,14 +206,14 @@ class CentralWidget(QWidget):
 
         # DropZone kollabieren wenn Ergebnisse vorhanden
         if has_results:
-            self._dropzone.setMaximumHeight(50)
+            self._dropzone.setMaximumHeight(60)
             self._dropzone.set_status(
-                "\U0001f4c2 + Weitere Dateien ziehen oder klicken"
+                "+ Weitere Dateien ziehen oder klicken"
             )
         else:
             self._dropzone.setMaximumHeight(16777215)  # QWIDGETSIZE_MAX
             self._dropzone.set_status(
-                "\U0001f4c2 Audio-Dateien hierher ziehen\noder klicken zum Auswählen"
+                "Audio-Dateien hierher ziehen\noder klicken zum Auswählen"
             )
 
         # Scroll-Step auf Kartenhöhe setzen
@@ -274,8 +277,8 @@ class CentralWidget(QWidget):
         best_score = best.hit_probability
 
         self._stats_bar.setText(
-            f"\U0001f4ca {len(valid)} Tracks: {hits}\U0001f525 {mids}\u2796 {flops}\U0001f480  \u2502  "
-            f"\U0001f3c6 Best: {best_name} ({best_score:.0%})"
+            f"{len(valid)} Tracks: {hits} Hit  {mids} Mid  {flops} Flop"
+            f"  \u2502  Best: {best_name} ({best_score:.0%})"
         )
 
     def _update_sort_button_styles(self) -> None:
@@ -288,21 +291,24 @@ class CentralWidget(QWidget):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-    def _on_dropzone_click(self, event) -> None:
-        """Öffnet den Datei-Dialog bei Klick auf die DropZone."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            extensions = " ".join(f"*{ext}" for ext in sorted(SUPPORTED_FORMATS))
-            files, _ = QFileDialog.getOpenFileNames(
-                self,
-                "Audio-Dateien auswählen",
-                self._open_dir,
-                f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
-            )
-            if files:
-                self.files_selected.emit(files)
+    def _on_browse(self) -> None:
+        """Verzögert den Datei-Dialog damit das mousePressEvent vollständig abgearbeitet wird."""
+        QTimer.singleShot(0, self._open_file_dialog)
+
+    def _open_file_dialog(self) -> None:
+        """Öffnet den Datei-Dialog."""
+        extensions = " ".join(f"*{ext}" for ext in sorted(SUPPORTED_FORMATS))
+        files, _ = QFileDialog.getOpenFileNames(
+            self.window(),
+            "Audio-Dateien auswählen",
+            self._open_dir,
+            f"Audio-Dateien ({extensions});;Alle Dateien (*.*)",
+        )
+        if files:
+            self.files_selected.emit(files)
 
     def _on_clear(self) -> None:
         """Clear-Button Handler."""
         if self._results:
             self.clear_results()
-            self.set_status("\U0001f5d1\ufe0f Ergebnisse gelöscht")
+            self.set_status("Ergebnisse gelöscht")

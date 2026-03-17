@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QVBoxLayout, QSizePolicy,
 )
 
-from spotilyzer.data.models import AnalysisResult, MEDALS, AppMode
+from spotilyzer.data.models import AnalysisResult, AppMode
 from spotilyzer.gui.widgets.confidence_bar import ConfidenceBar
 
 
@@ -28,13 +28,18 @@ class ResultCard(QFrame):
     clicked = Signal(object)  # Emittiert AnalysisResult bei Klick
 
     RATING_COLORS = {"hit": "#22c55e", "mid": "#eab308", "flop": "#ef4444"}
-    RATING_EMOJIS = {"hit": "\U0001f525", "mid": "\u2796", "flop": "\U0001f480"}
 
-    # Feste Kartenhöhen pro Modus (QSS padding:10px + border:1px + Inhalt)
+    # Farbige Rang-Zahlen für Top 3 (kein Emoji — verhindert Segoe UI Emoji Hintergrundfarben)
+    RANK_COLORS = {0: "#FFD700", 1: "#B8B8B8", 2: "#CD7F32"}  # Gold, Silber, Bronze
+
+    # Feste Kartenhöhen pro Modus
+    # SIMPLE:   margins(12) + header(~22) + spacing(4) + bar(20) = 58  → 68
+    # BALANCED: + spacing(4) + audio_info(~16) = 78                    → 88
+    # PRO:      + spacing(4) + CLAP-Zeile(~16) = 98                    → 104
     CARD_HEIGHTS = {
-        AppMode.SIMPLE: 68,     # padding(20) + border(2) + header(~22) + spacing(4) + bar(22)
-        AppMode.BALANCED: 88,   # + spacing(4) + audio_info(~16)
-        AppMode.PRO: 88,        # gleich wie BALANCED (Info einzeilig mit Ellipsis)
+        AppMode.SIMPLE:   68,
+        AppMode.BALANCED: 88,
+        AppMode.PRO:      104,
     }
 
     # Kartenhöhe + Spacing ergibt die Rasterzeile
@@ -64,7 +69,7 @@ class ResultCard(QFrame):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setContentsMargins(10, 6, 10, 6)
         layout.setSpacing(4)
 
         if self.result.is_error:
@@ -88,24 +93,29 @@ class ResultCard(QFrame):
         """Normale Ergebnis-Karte."""
         rating = self.result.rating
         color = self.RATING_COLORS.get(rating, "#a5a5a5")
-        emoji = self.RATING_EMOJIS.get(rating, "?")
 
         # ── Zeile 1: Rang + Dateiname + Rating-Badge ──
         header = QHBoxLayout()
         header.setSpacing(8)
 
-        # Medaille / Rang — Farbe kommt via QSS (#MedalLabel / #RankLabel)
-        medal = MEDALS.get(self.rank, "")
-        rank_text = medal if medal else f"#{self.rank + 1}"
+        # Rang: Top-3 in Gold/Silber/Bronze, Rest gedimmt — kein Emoji
+        rank_text = f"#{self.rank + 1}"
         rank_label = QLabel(rank_text)
-        rank_label.setFixedWidth(28)
-        rank_label.setObjectName("MedalLabel" if medal else "RankLabel")
+        rank_label.setFixedWidth(34)
+        rank_color = self.RANK_COLORS.get(self.rank)
+        if rank_color:
+            rank_label.setStyleSheet(
+                f"color: {rank_color}; font-weight: bold; font-size: 13px;"
+            )
+            rank_label.setObjectName("MedalLabel")
+        else:
+            rank_label.setObjectName("RankLabel")
         header.addWidget(rank_label)
 
         # Dateiname
         display_name = self.result.file
-        if len(display_name) > 50:
-            display_name = display_name[:47] + "..."
+        if len(display_name) > 70:
+            display_name = display_name[:67] + "..."
         name_label = QLabel(display_name)
         name_label.setStyleSheet("font-weight: bold; font-size: 13px;")
         name_label.setSizePolicy(
@@ -116,9 +126,9 @@ class ResultCard(QFrame):
 
         header.addStretch()
 
-        # Rating-Badge (farbig)
+        # Rating-Badge (farbig, kein Emoji)
         confidence = self.result.probabilities.get(rating, self.result.confidence)
-        rating_label = QLabel(f" {emoji} {rating.upper()} ({confidence:.0%}) ")
+        rating_label = QLabel(f" {rating.upper()} ({confidence:.0%}) ")
         rating_label.setStyleSheet(
             f"color: {color}; font-weight: bold; font-size: 12px; "
             f"background-color: {color}18; border-radius: 4px; padding: 2px 6px;"
@@ -138,6 +148,36 @@ class ResultCard(QFrame):
         # ── Zeile 3: Audio-Info (ab Ausgewogen) ──
         if self.app_mode != AppMode.SIMPLE and self.result.audio_info:
             self._add_audio_info(layout)
+
+        # ── Zeile 4: CLAP Genre/Mood-Tags (ab Ausgewogen, wenn vorhanden) ──
+        if self.app_mode != AppMode.SIMPLE and self.result.clap_result:
+            self._add_clap_tags(layout)
+
+    def _add_clap_tags(self, layout: QVBoxLayout):
+        """Fügt CLAP Genre/Mood-Tags als kompakte Zeile hinzu."""
+        clap = self.result.clap_result
+        parts = []
+
+        genre = clap.top_genre()
+        mood = clap.top_mood()
+        if genre:
+            parts.append(f"Genre: {genre}")
+        if mood:
+            parts.append(mood)
+
+        # Weitere Top-Tags (ohne genre/mood, max 3 zusätzlich)
+        shown = {genre, mood} - {None}
+        extras = [t for t in clap.top_tags if t not in shown][:3]
+        if extras:
+            parts.append("· " + " · ".join(extras))
+
+        if not parts:
+            return
+
+        tags_label = QLabel("  ".join(parts))
+        tags_label.setObjectName("MutedLabel")
+        tags_label.setWordWrap(False)
+        layout.addWidget(tags_label)
 
     def _add_audio_info(self, layout: QVBoxLayout):
         """Fügt technische Audio-Informationen als kompakte Zeile hinzu."""
@@ -169,8 +209,8 @@ class ResultCard(QFrame):
                 info_parts.append(f"E:{ai.energy:.2f}")
 
         info_text = " \u2502 ".join(info_parts)
-        if len(info_text) > 100:
-            info_text = info_text[:97] + "..."
+        if len(info_text) > 130:
+            info_text = info_text[:127] + "..."
         info_label = QLabel(info_text)
         info_label.setObjectName("MutedLabel")
         info_label.setWordWrap(False)

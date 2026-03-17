@@ -80,6 +80,21 @@ def print_result(result: AnalysisResult, style: str = "default") -> None:
         if ai.bitrate:
             output += f"\n\u2551    Bitrate:     {ai.bitrate} kbps"
 
+    # CLAP-Ergebnis (wenn vorhanden)
+    if result.clap_result:
+        clap = result.clap_result
+        output += "\n\u2551\n\u2551  Genre / Mood (CLAP Zero-Shot):"
+        if clap.genre_scores:
+            top_genre = clap.top_genre()
+            top_score = clap.genre_scores.get(top_genre, 0)
+            output += f"\n\u2551    Genre:       {top_genre} ({top_score:.3f})"
+        if clap.mood_scores:
+            top_mood = clap.top_mood()
+            top_score = clap.mood_scores.get(top_mood, 0)
+            output += f"\n\u2551    Stimmung:    {top_mood} ({top_score:.3f})"
+        if clap.top_tags:
+            output += f"\n\u2551    Top Tags:    {', '.join(clap.top_tags)}"
+
     output += f"\n\u255a{'=' * 79}\n"
     print(output)
 
@@ -121,6 +136,17 @@ def main() -> None:
         action="store_true",
         help="Keine technischen Audio-Daten extrahieren",
     )
+    parser.add_argument(
+        "--include-clap",
+        action="store_true",
+        help="Zero-Shot Genre/Mood-Analyse via LAION CLAP (lädt ~600 MB Modell)",
+    )
+    parser.add_argument(
+        "--vram-mode",
+        choices=["parallel", "sequential"],
+        default="parallel",
+        help="VRAM-Modus: parallel (Standard) oder sequential (für <8 GB VRAM)",
+    )
     args = parser.parse_args()
 
     track_path = Path(args.track)
@@ -152,6 +178,7 @@ def main() -> None:
             model_path=model_path,
             device=args.device,
             progress_callback=progress,
+            vram_mode=args.vram_mode,
         )
     except Exception as e:
         print(f"Fehler beim Laden der Pipeline: {e}", file=sys.stderr)
@@ -164,6 +191,7 @@ def main() -> None:
     result = pipeline.analyze(
         track_path,
         include_audio_info=not args.no_audio_info,
+        include_clap=args.include_clap,
     )
 
     # Output
