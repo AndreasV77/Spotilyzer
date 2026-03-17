@@ -327,7 +327,8 @@ class SpotilyzerApp(QMainWindow):
         if not model_path:
             self._central.set_status(
                 "\u274c Modell nicht gefunden! "
-                "Bitte 'models/spotilyzer_model.joblib' bereitstellen."
+                "Bitte ein 'spotilyzer_model_*.joblib' in models/ bereitstellen "
+                "oder unter Einstellungen > Modell einen Pfad angeben."
             )
             return
 
