@@ -2,7 +2,7 @@
 
 ML-basiertes Audio-Analyse-Tool. Klassifiziert Tracks als **Hit / Mid / Flop** anhand von Mainstream-Kompatibilität.
 
-**Pipeline:** Audiodatei → MERT-v1-95M Embeddings (768-dim) → XGBoost 3-Klassen-Klassifikator → GUI oder CLI
+**Pipeline:** Audiodatei → MERT-v1-330M Embeddings (1024-dim) → XGBoost 3-Klassen-Klassifikator → GUI oder CLI
 
 ---
 
@@ -42,19 +42,16 @@ spotilyzer-cli "mein_track.mp3"
 
 ## Modell-Performance (aktuell)
 
-Trainiert auf **5.600 Samples** (Deezer 30s-Previews + Charts), 768-dim MERT-Embeddings.
+Trainiert auf **~8.960 validated Samples** (Deezer 30s-Previews + Spotify Charts + Kworb historische Charts, 6 Märkte), 1024-dim MERT-v1-330M Embeddings. Holdout-Set: 1173 Samples (20%).
 
 | Metrik            | Wert           |
 |-------------------|----------------|
-| Accuracy          | 71,0 %         |
-| Balanced Accuracy | 62,5 %         |
-| F1 macro          | 64,8 %         |
-| Hit Recall        | **93,6 %** ✓  |
-| Flop Recall       | 26,8 % (schwach)|
-| Mid Precision     | 94,1 % ✓      |
+| Balanced Accuracy | **63,0 %**     |
+| Hit Recall        | **72,8 %**     |
+| Flop Recall       | **68,7 %** ✓  |
 
 **Interpretation:** ≥ 85 % Confidence = echtes Potential. < 60 % = unsicher, als Mid behandeln.
-Inferenz: ~0,53 s/Track auf GTX 1660 Ti.
+Inferenz: ~0,8 s/Track auf GTX 1660 Ti. Hit Recall verbessert sich kontinuierlich — aktuell 72,8 % (Ziel ≥ 80 %).
 
 ---
 
@@ -96,65 +93,23 @@ pip install -e ".[dev]"
 
 ## Training
 
-Das Training nutzt **Deezer** als Datenquelle (kostenlose, unauthentifizierte API mit `rank`-Feld
-als Popularitäts-Proxy). Spotify wurde im Februar 2026 als Quelle aufgegeben, da die API
-`/audio-features`, Track-Popularity und die Recommendations-Endpoint entfernt hat.
+Das Training läuft im separaten Repository [SpotilyzerTraining](https://github.com/AndreasV77/SpotilyzerTraining).
 
-### Trainingsdaten-Pipeline (in dieser Reihenfolge)
+**Datenquellen:**
+- **Deezer API** — 30s-Previews + Popularity-Rank (kostenlos, keine Auth)
+- **Last.fm API** — Playcount + Listeners zur Label-Validierung
+- **Spotify Charts CSV** — Top 200 Charts (manuell, 7 Märkte)
+- **Kworb.net** — Historische Chart-Daten (peak_position, weeks_in_chart)
+- **MusicBrainz API** — ISRC-Lookup für Deduplizierung
 
-```bash
-# 1. Tracks scouten (Deezer API → CSV mit Track-IDs und Ranks)
-python training/scout_genre_clusters_deezer.py --save-tracks
+**Aktueller Datensatz:** 5.660 validated Samples, 1.216 Hits, 23 Genre-Cluster + Charts
 
-# 2. Previews herunterladen (30s-MP3s von Deezer, ~2,2 GB)
-#    WICHTIG: Deezer Preview-URLs laufen nach ~15 Min ab — immer frisch holen!
-python training/download_previews.py
-
-# 3. MERT-Embeddings extrahieren (GPU empfohlen: <1s/Track, CPU: ~10-15s/Track)
-python training/extract_embeddings.py
-
-# 4. XGBoost-Modell trainieren
-python training/train_model.py
+**Deployment:**
+```powershell
+# Nach Training in SpotilyzerTraining:
+Copy-Item outputs/models/spotilyzer_model_MERTv1330M_*_validated_*.joblib ..\Spotilyzer\models\
+Copy-Item outputs/reports/training_report_MERTv1330M_*_validated_*.json   ..\Spotilyzer\models\
 ```
-
-**Ausgabe:** `models/spotilyzer_model.joblib` + `models/training_report.json`
-
-### Externe Datenpfade (optional)
-
-Standardmäßig landen alle Trainingsdaten im Projektordner. Für externe Festplatten oder
-andere Verzeichnisse:
-
-```bash
-# Vorlage kopieren
-cp training/paths.env.example training/paths.env
-
-# Pfade in training/paths.env anpassen:
-# SPOTILYZER_PREVIEWS_DIR=E:/Spotilyzer-Data/previews
-# SPOTILYZER_EMBEDDINGS_DIR=E:/Spotilyzer-Data/embeddings
-# … etc.
-
-# Aktive Pfade prüfen
-python training/config.py
-```
-
-`training/paths.env` ist gitignored (lokale Maschinenpfade). CLI-Argumente der Skripte
-überschreiben die Pfade aus `paths.env` immer.
-
-### 16 Genre-Cluster
-
-Extreme Metal · Gothic · Heavy Metal · Power/Symphonic · Modern Metal · Metalcore ·
-Crossover · Hard Rock · Mainstream Rock · Modern Rock · Classic/Southern Rock ·
-Alternative · Punk · Hardcore · Trance · House
-
-Zusätzlich: Länder-Charts (DE, US, UK, JP, GLOBAL) mit ~500 Extra-Tracks.
-
-### Rank-Schwellen (Deezer)
-
-| Rating | Deezer Rank        |
-|--------|--------------------|
-| Flop   | < 300.000          |
-| Mid    | 300.000 – 700.000  |
-| Hit    | > 700.000          |
 
 ---
 
