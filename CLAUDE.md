@@ -210,43 +210,35 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 ## Model Performance (current)
 
-Zwei Modelle in `models/` (jeweils `spotilyzer_model_{embedder}_{date}.joblib`):
+Alle Metriken auf echtem Holdout-Set (20%, 1132 Samples). Quelle: SpotilyzerTraining `evaluation_report_*.json`.
 
-### Aktives Modell: MERTv1330M_20260317 (1024-dim)
+### Aktives Modell: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (1024-dim)
 
-Trained on **8,738 samples** (Deezer 30s previews, DE/US/UK/FR/BR/ES + charts), label-swap-bug fixed, compute_sample_weight balanced.
-
-| Metric | Value |
-|--------|-------|
-| Balanced Accuracy | 51.3% |
-| Hit Recall | **15.2%** (77.6% der Hits → Mid — zu konservativ) |
-| Flop Recall | 59.6% |
-
-**Praktische Verwendung:** Guter Flop-Filter. Hit-Erkennung unzuverlässig bis mehr Hit-Daten vorhanden (Ziel: ≥2000 Hits).
-
-### Modell: MERTv195M_20260317 (768-dim) — neu trainiert
-
-Trained on **8,738 samples** (gleicher Datensatz), bug-fixed, max_depth=6, colsample_bytree=0.8.
+Trainiert auf **~8.960 validated Samples** (Deezer-Scouting + Spotify Top 200 Charts + Kworb historische Charts, 6 Märkte). ~3.700 Hits.
 
 | Metric | Value |
 |--------|-------|
-| Balanced Accuracy | 47.8% (CV) |
-| Hit Recall | **5.6%** — schlechter als 330M |
-| Flop Recall | 48.6% |
+| Balanced Accuracy | **63.0%** |
+| Hit Recall | **72.8%** |
+| Flop Recall | 68.7% ✓ |
 
-**Bewertung:** Schlechter als 330M-Modell trotz 95M-optimierten Params. Ursache: 626 Hits (7.2%) Klassenunterrepräsentation. Noch nicht nach Spotilyzer/models/ kopiert.
+### Vorgänger: MERTv1330M_main+spotify_charts_validated_20260319 (1024-dim)
 
-### Altes Referenzmodell: MERTv195M_20260302 (768-dim)
+| Metric | Value |
+|--------|-------|
+| Balanced Accuracy | 60.9% |
+| Hit Recall | 55.1% |
+| Flop Recall | 69.2% ✓ |
 
-Trained on **5,600 samples** mit label-swap-bug — historisch, nicht produktiv verwenden.
+**Praktische Verwendung:** Flop-Filter funktioniert gut (≥68%). Hit Recall verbessert sich mit mehr Daten — von 37.5% (Session 3) auf 72.8% (Session 5), je +~2500 Hits → +17–18pp.
 
-**Model bias:** Defaults to "Hit" under uncertainty. Practical interpretation: 85%+ confidence = genuine potential; below 60% = treat as uncertain. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
+**Model bias:** 85%+ Confidence = echtes Potential. < 60% = unsicher, als Mid behandeln. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
 
-**Inference speed:** ~0.53s/track (95M) / ~0.8s/track (330M) on GTX 1660 Ti.
+**Inference speed:** ~0.53s/Track (95M) / ~0.8s/Track (330M) auf GTX 1660 Ti.
 
 **Modell-Vergleich:** Siehe `models/MODEL_COMPARISON.md`.
 
-**Zur Verbesserung:** Mehr Hit-Samples (IT, MX, CA, AU, JP Charts), Ziel ≥2000 Hits. → SpotilyzerTraining.
+**Zur Verbesserung:** Weitere Datenwachstums-Optionen oder Hyperparameter-Tuning für die letzten 7.2pp bis Hit Recall ≥80%. → SpotilyzerTraining.
 
 ## Known Issues & Gotchas
 
@@ -380,7 +372,7 @@ Geplant: Upgrade auf 16+ GB
 - Genre-specific models (one per cluster)
 - Portable Windows EXE (PyInstaller + CUDA strip, targeting ~3 GB)
 - Stem-basierte Analyse (Demucs/MDX-Net Integration)
-- **QQ Music / NetEase Cloud Music als Trainingsdatenquelle** (eigenes Projekt): Beide Plattformen haben öffentliche APIs mit Popularitätssignalen (Play-Count, Kommentare, Favoriten) und sind hit-dicht im asiatischen/internationalen Mainstream. Zugang über inoffizielle/reverse-engineerte APIs oder Drittanbieter-Wrapper (z.B. `pyncm` für NetEase). Rechtliche Lage unklar — vor Implementierung prüfen. Primärer Mehrwert: deutlich mehr Hit-Samples für unterrepräsentierte Klasse.
+- Mehr Hit-Samples via Kworb-Scraper + Spotify Charts (SpotilyzerTraining)
 
 ---
 
