@@ -149,8 +149,9 @@ class ResultCard(QFrame):
         if self.app_mode != AppMode.SIMPLE and self.result.audio_info:
             self._add_audio_info(layout)
 
-        # ── Zeile 4: CLAP Genre/Mood-Tags (ab Ausgewogen, wenn vorhanden) ──
-        if self.app_mode != AppMode.SIMPLE and self.result.clap_result:
+        # ── Zeile 4: CLAP Genre/Mood-Tags (nur PRO, wenn vorhanden) ──
+        # BALANCED-Karte hat keine Höhe dafür (88px); PRO hat 104px.
+        if self.app_mode == AppMode.PRO and self.result.clap_result:
             self._add_clap_tags(layout)
 
     def _add_clap_tags(self, layout: QVBoxLayout):
@@ -198,15 +199,17 @@ class ResultCard(QFrame):
             info_parts.append(ai.key)
         info_parts.append(ai.format.upper())
 
-        # Profi: Zusätzlich Sample-Rate, Bitrate, Channels, Dateigröße, Energy
+        # Profi: Zusätzlich Sample-Rate, Bitrate, Channels, Dateigröße, Spectral
         if self.app_mode == AppMode.PRO:
             info_parts.append(f"{ai.sample_rate} Hz")
             if ai.bitrate:
                 info_parts.append(f"{ai.bitrate} kbps")
             info_parts.append(ai.channels_label)
             info_parts.append(ai.file_size_formatted)
-            if ai.energy is not None:
-                info_parts.append(f"E:{ai.energy:.2f}")
+            if ai.spectral_centroid is not None:
+                info_parts.append(f"{ai.spectral_centroid/1000:.1f}kHz")
+            if ai.onset_rate is not None:
+                info_parts.append(f"{ai.onset_rate:.1f}/s")
 
         info_text = " \u2502 ".join(info_parts)
         if len(info_text) > 130:

@@ -67,10 +67,14 @@ class AudioInfo:
     file_size_bytes: int = 0
 
     # Berechnete Metriken
-    bpm: Optional[float] = None          # Geschätztes Tempo (torchaudio onset detection)
-    lufs: Optional[float] = None         # Integrated Loudness (EBU R128)
-    key: Optional[str] = None            # Geschätzte Tonart (z.B. "C major", "A minor")
-    energy: Optional[float] = None       # Spektrale Energie (RMS-basiert, 0.0-1.0)
+    bpm: Optional[float] = None                  # Geschätztes Tempo (librosa beat_track)
+    lufs: Optional[float] = None                 # Integrated Loudness (EBU R128)
+    key: Optional[str] = None                    # Geschätzte Tonart (z.B. "C major", "A minor")
+    spectral_centroid: Optional[float] = None    # Spektraler Schwerpunkt in Hz (hell ↑ / dunkel ↓)
+    spectral_flatness: Optional[float] = None    # Tonalität 0.0 (tonal) – 1.0 (rauschartig)
+    onset_rate: Optional[float] = None           # Rhythmische Dichte in Onsets/Sekunde
+    true_peak_dbfs: Optional[float] = None       # True Peak in dBFS (Sample-Maximum)
+    energy: Optional[float] = None               # DEPRECATED – nur für alte Saves (RMS-basiert)
 
     @property
     def duration_formatted(self) -> str:
@@ -114,8 +118,14 @@ class AudioInfo:
             d["lufs"] = round(self.lufs, 1)
         if self.key is not None:
             d["key"] = self.key
-        if self.energy is not None:
-            d["energy"] = round(self.energy, 4)
+        if self.spectral_centroid is not None:
+            d["spectral_centroid"] = round(self.spectral_centroid, 1)
+        if self.spectral_flatness is not None:
+            d["spectral_flatness"] = round(self.spectral_flatness, 4)
+        if self.onset_rate is not None:
+            d["onset_rate"] = round(self.onset_rate, 2)
+        if self.true_peak_dbfs is not None:
+            d["true_peak_dbfs"] = round(self.true_peak_dbfs, 1)
         return d
 
 
@@ -216,7 +226,11 @@ class AnalysisResult:
                 bpm=ai.get("bpm"),
                 lufs=ai.get("lufs"),
                 key=ai.get("key"),
-                energy=ai.get("energy"),
+                spectral_centroid=ai.get("spectral_centroid"),
+                spectral_flatness=ai.get("spectral_flatness"),
+                onset_rate=ai.get("onset_rate"),
+                true_peak_dbfs=ai.get("true_peak_dbfs"),
+                energy=ai.get("energy"),  # DEPRECATED: alte Saves
             )
 
         # Model-Info deserialisieren (v2.1+)

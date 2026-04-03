@@ -111,7 +111,8 @@ class ResultExporter:
             if has_audio_info:
                 header.extend([
                     "Dauer", "BPM", "LUFS", "Tonart", "Format",
-                    "Sample-Rate", "Bitrate", "Channels", "Dateigröße", "Energie",
+                    "Sample-Rate", "Bitrate", "Channels", "Dateigröße",
+                    "Centroid (Hz)", "Flatness", "Onset-Rate (/s)",
                 ])
             writer.writerow(header)
 
@@ -142,10 +143,12 @@ class ResultExporter:
                             f"{ai.bitrate}" if ai.bitrate else "",
                             ai.channels_label,
                             ai.file_size_formatted,
-                            f"{ai.energy:.4f}" if ai.energy else "",
+                            f"{ai.spectral_centroid:.1f}" if ai.spectral_centroid else "",
+                            f"{ai.spectral_flatness:.4f}" if ai.spectral_flatness else "",
+                            f"{ai.onset_rate:.2f}" if ai.onset_rate else "",
                         ])
                     else:
-                        row.extend([""] * 10)
+                        row.extend([""] * 12)
                 writer.writerow(row)
 
     def to_markdown(self, results: list[AnalysisResult], path: Path) -> None:
