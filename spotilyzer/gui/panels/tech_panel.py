@@ -102,7 +102,9 @@ class TechPanel(QDockWidget):
             ("BPM", "bpm"),
             ("LUFS", "lufs"),
             ("Tonart", "key"),
-            ("Energie", "energy"),
+            ("Centroid", "spectral_centroid"),
+            ("Flatness", "spectral_flatness"),
+            ("Onset-Rate", "onset_rate"),
         ]
 
         for display_name, field_key in field_defs:
@@ -293,8 +295,14 @@ class TechPanel(QDockWidget):
             f"{ai.lufs:.1f} dB" if ai.lufs is not None else "\u2014"
         )
         self._info_fields["key"].setText(ai.key if ai.key else "\u2014")
-        self._info_fields["energy"].setText(
-            f"{ai.energy:.4f}" if ai.energy is not None else "\u2014"
+        self._info_fields["spectral_centroid"].setText(
+            f"{ai.spectral_centroid:.0f} Hz" if ai.spectral_centroid is not None else "\u2014"
+        )
+        self._info_fields["spectral_flatness"].setText(
+            f"{ai.spectral_flatness:.4f}" if ai.spectral_flatness is not None else "\u2014"
+        )
+        self._info_fields["onset_rate"].setText(
+            f"{ai.onset_rate:.2f} /s" if ai.onset_rate is not None else "\u2014"
         )
 
     def _clear_info_fields(self) -> None:
