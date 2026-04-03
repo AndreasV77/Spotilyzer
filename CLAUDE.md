@@ -210,27 +210,30 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 ## Model Performance (current)
 
-Alle Metriken auf echtem Holdout-Set (20%, 1132 Samples). Quelle: SpotilyzerTraining `evaluation_report_*.json`.
+Alle Metriken auf echtem Holdout-Set (20%, 4545 Samples). Quelle: SpotilyzerTraining `evaluation_report_*.json`.
 
 ### Aktives Modell: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (1024-dim)
 
-Trainiert auf **~8.960 validated Samples** (Deezer-Scouting + Spotify Top 200 Charts + Kworb historische Charts, 6 Märkte). ~3.700 Hits.
+Trainiert auf **~22.722 validated Samples** (Deezer-Scouting + Spotify Top 200 Charts + Kworb historische Charts, 12 Märkte). ~14.991 Hits. XGBoost: max_depth=4, colsample=0.6, n_estimators=500.
+
+| Metric | Value | Ziel |
+|--------|-------|------|
+| Balanced Accuracy | **64.2%** | ≥ 65% |
+| Hit Recall | **86.9%** ✓ | ≥ 80% |
+| Flop Recall | **67.5%** ✓ | ≥ 50% |
+| Mid Recall | 34.7% | — |
+
+**Training-Ceiling erreicht (Session 8, 2026-03-31):** Hyperparameter-Sweeps (max_depth 4→6, colsample 0.6→0.8) zeigen monotonen Trade-off: mehr Tiefe → Hit Recall ↑, BA/Flop ↓. Optimum bei depth=4, col=0.6. Post-hoc Logit-Adjustment (τ=0.25) erreicht BA=65.3% aber Hit Recall sinkt auf 73.2% — beide Ziele gleichzeitig technisch nicht erreichbar. Audio-only Decke bei ~64–65% BA. Nächste BA-Verbesserung erfordert zusätzliche Features (librosa, Metadaten) oder Artist-Dedup im Training.
+
+### Vorgänger: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (Session 5, ~8.960 val.)
 
 | Metric | Value |
 |--------|-------|
-| Balanced Accuracy | **63.0%** |
-| Hit Recall | **72.8%** |
+| Balanced Accuracy | 63.0% |
+| Hit Recall | 72.8% |
 | Flop Recall | 68.7% ✓ |
 
-### Vorgänger: MERTv1330M_main+spotify_charts_validated_20260319 (1024-dim)
-
-| Metric | Value |
-|--------|-------|
-| Balanced Accuracy | 60.9% |
-| Hit Recall | 55.1% |
-| Flop Recall | 69.2% ✓ |
-
-**Praktische Verwendung:** Flop-Filter funktioniert gut (≥68%). Hit Recall verbessert sich mit mehr Daten — von 37.5% (Session 3) auf 72.8% (Session 5), je +~2500 Hits → +17–18pp.
+**Praktische Verwendung:** Hit Recall-Ziel ≥80% erreicht. Flop-Filter funktioniert gut. Mid-Klasse bleibt schwierig (34.7% Recall) — wird häufig mit Hit verwechselt.
 
 **Model bias:** 85%+ Confidence = echtes Potential. < 60% = unsicher, als Mid behandeln. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
 
@@ -238,7 +241,7 @@ Trainiert auf **~8.960 validated Samples** (Deezer-Scouting + Spotify Top 200 Ch
 
 **Modell-Vergleich:** Siehe `models/MODEL_COMPARISON.md`.
 
-**Zur Verbesserung:** Weitere Datenwachstums-Optionen oder Hyperparameter-Tuning für die letzten 7.2pp bis Hit Recall ≥80%. → SpotilyzerTraining.
+**Zur Verbesserung:** Training-Hyperparameter-Raum ausgeschöpft. BA-Steigerung über 65% erfordert Artist-level Dedup im Training (GroupKFold), librosa-Features, oder LightGBM-Vergleich. → SpotilyzerTraining.
 
 ## Known Issues & Gotchas
 
@@ -254,7 +257,7 @@ Trainiert auf **~8.960 validated Samples** (Deezer-Scouting + Spotify Top 200 Ch
 
 **CLAP genre accuracy on niche genres:** `laion/larger_clap_music` does not reliably distinguish metal subgenres (gothic, doom, black, death) — it tends toward generic labels like "r&b" or "electronic". Adding specific subgenre tags to `DEFAULT_TAG_SETS` helps marginally. For production use, a fine-tuned classifier is preferable.
 
-**BPM octave errors:** The autocorrelation-based BPM estimator can return 2× the true tempo for slow/doom genres (e.g., 105 BPM reported as 154 BPM). No automatic correction implemented yet.
+**BPM metric-level ambiguity:** librosa's DP beat tracker detects the Quarter-Note pulse. In genres with strong Half-Time feel (e.g., AI-generated metal/electronic), the detected BPM may be the "groove pulse" rather than the "felt" tempo. Example: 4 AI-generated tracks measured at 92–117 BPM felt like 140–150 BPM. Root cause unclear without knowing the DAW project BPM. No automatic correction — genre-specific heuristic would be required.
 
 ## Export Formats
 
@@ -340,7 +343,7 @@ Geplant: Upgrade auf 16+ GB
 - [x] `CLAPResult` Dataclass mit Serialisierung
 - [x] Konfigurierbare Tag-Sets (nicht hardcoded)
 - [x] Integration in CLI: `--include-clap` Flag
-- [ ] Integration in GUI: Settings-Checkbox + Anzeige in Result-Card (PRO-Mode) ← **offen**
+- [x] Integration in GUI: Settings-Checkbox + Anzeige in Result-Card (PRO-Mode)
 - [x] Sequentieller VRAM-Modus funktioniert auf 6 GB
 - [ ] Tests für Similarity-Berechnung
 
@@ -354,12 +357,21 @@ Geplant: Upgrade auf 16+ GB
 ## Roadmap
 
 **Outstanding (near-term):**
-- **CLAP GUI-Integration** (see NEXT TASK above): Settings-Checkbox (PRO mode) + CLAPResult in ResultCard
-- Fix BPM octave error (halve if > configurable threshold, e.g., 160 BPM for slow genres)
+- ~~**CLAP GUI-Integration**~~ ✅ — Settings-Checkbox (PRO mode) + CLAPResult in ResultCard implementiert
+- ~~**librosa BPM-Fix**~~ ✅ — librosa Dynamic-Programming Beat Tracker + Oktavkorrektur (Session 9, 2026-04-01)
+- ~~**librosa Energy-Ersatz**~~ ✅ — Spectral Centroid (Hz), Flatness (0-1), Onset Rate (/s) in AudioInfo (Session 9)
+- ~~**`spotilyzer/analysis/` Phase-1-Modul**~~ ✅ — spectral, temporal, production features + FeatureExtractor + to_ki_context() (Session 9)
+- ~~**Key-Erkennung**~~ ✅ — chroma_cqt + chroma_cens (librosa) statt manuelles STFT-Loop (Session 9)
+- ~~**`spotilyzer/analysis/` Phase-2-Modul**~~ ✅ — DiagnosticResult (7-Band Mix-Analyse) + RoleResult (HPSS Instrument-Rollen) (Session 10, 2026-04-02)
+- ~~**CLI `--full-analysis` / `--no-rating`**~~ ✅ — Spektral-Analyse in CLI integriert (Session 10)
+- ~~**CLI `--threesome` Batch-Modus**~~ ✅ — BPM/LUFS/TruePeak/PLR/Key als Tabelle, Ordner+Glob-Support (Session 10)
+- ~~**True Peak EBU R128**~~ ✅ — 4× Oversampling via scipy.signal.resample_poly, erkennt Inter-Sample-Clipping (Session 10)
 - ~~95M-Neutraining~~ ✅ — MERTv195M_20260317 trainiert (BA=47.8%, Hit=5.6% — schlechter als 330M, noch nicht deployed)
 
 **Medium-term:**
-- ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall still low (~15%) due to class imbalance, more training data needed
+- **Essentia-Integration** — Stub `analysis/essentia_features.py` vorhanden (key+danceability+rhythm). Kein PyPI-Wheel für Windows; benötigt MSVC + CMake + Eigen3 + libav via vcpkg zum Kompilieren. WSL/Conda ausgeschlossen. Revisit wenn nativer Windows-Build stabil. **Nicht in portable EXE bundeln** (native C++-Deps, PyInstaller-inkompatibel).
+- ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall ≥80% erreicht (86.9%, Session 6)
+- ~~Mehr Hit-Samples via Kworb-Scraper + Spotify Charts~~ ✅ — 22.722 Samples, Hit Recall 86.9% (SpotilyzerTraining Sessions 5–6)
 - "Sounds like..." — similarity search in embedding space
 - Genre classification — second model for cluster assignment
 - In-app genre cluster editor + scouting trigger (PRO mode)
@@ -372,7 +384,7 @@ Geplant: Upgrade auf 16+ GB
 - Genre-specific models (one per cluster)
 - Portable Windows EXE (PyInstaller + CUDA strip, targeting ~3 GB)
 - Stem-basierte Analyse (Demucs/MDX-Net Integration)
-- Mehr Hit-Samples via Kworb-Scraper + Spotify Charts (SpotilyzerTraining)
+- BA ≥65% via GroupKFold-Training (Artist-Dedup) oder zusätzliche Features (SpotilyzerTraining)
 
 ---
 
@@ -381,5 +393,7 @@ Geplant: Upgrade auf 16+ GB
 | Metrik | Problem | Fix |
 |--------|---------|-----|
 | ~~**LUFS**~~ | ~~RMS-Approximation, nicht EBU R128~~ | ✅ `pyloudnorm` integriert (EBU R128 K-weighting) |
-| **BPM** | Tempo-Verdopplung/-Halbierung | `librosa.beat.tempo()` — noch offen |
-| **Energy** | Willkürliche Skalierung, unklare Definition | Aufteilen in Spectral Centroid, Flatness, Onset Rate — noch offen |
+| ~~**BPM**~~ | ~~Tempo-Verdopplung/-Halbierung~~ | ✅ librosa DP Beat Tracker + Oktavkorrektur (Session 9) |
+| ~~**Energy**~~ | ~~Willkürliche Skalierung, unklare Definition~~ | ✅ Spectral Centroid, Flatness, Onset Rate (Session 9) |
+| ~~**True Peak**~~ | ~~Sample-Maximum erkennt kein Inter-Sample-Clipping~~ | ✅ 4× Oversampling EBU R128 via scipy (Session 10) |
+| **BPM Metrik-Ebene** | Beat Tracker trifft Quarter-Note-Puls, nicht immer die wahrgenommene Ebene (Half-Time/Double-Time-Feel) | Offen — erfordert genre-spezifische Heuristik |
