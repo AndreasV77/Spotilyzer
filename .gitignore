@@ -13,6 +13,7 @@ build/
 
 # Training: lokale Pfad-Konfiguration (Vorlage: training/paths.env.example)
 training/paths.env
+legacy/training/paths.env
 
 # Output-Artefakte
 output/
@@ -26,8 +27,6 @@ Thumbs.db
 # Training-Daten (zu groß für Git)
 embeddings/
 previews/
-scout_results/
-scout_results_deezer/
 
 # PyInstaller
 *.spec.bak
@@ -35,6 +34,25 @@ scout_results_deezer/
 # Audio-Dateien (Test/Local)
 local_audio/
 !local_audio/.gitkeep
+*.mp3
+*.flac
+*.wav
+*.ogg
+*.m4a
+*.aac
+*.wma
 
 # Spotilyzer Runtime
 spotilyzer_results.json
+
+# Modell-Binaries (zu groß für Git, werden lokal gebaut)
+models/*.joblib
+
+# AI-Tool-Konfigurationsordner
+\!BU/
+.claire/
+.claude/
+.codex/
+
+# Lokale Test-Ordner
+TEST/
