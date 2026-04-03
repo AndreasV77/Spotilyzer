@@ -677,8 +677,18 @@ class SpotilyzerApp(QMainWindow):
         if not hasattr(self, "_exporter"):
             self._exporter = ResultExporter()
 
-        # Export-Defaults aus Settings
+        # Export-Defaults aus Settings → initial filter für Dialog
         defaults = self._settings_panel.get_export_defaults()
+        _filter_order = [
+            ("csv", "CSV (*.csv)"),
+            ("md", "Markdown (*.md)"),
+            ("txt", "Text (*.txt)"),
+            ("json", "JSON (*.json)"),
+        ]
+        initial_filter = next(
+            (filt for key, filt in _filter_order if defaults.get(key)),
+            "JSON (*.json)",
+        )
 
         # Export-Dialog
         default_name = (
@@ -691,6 +701,7 @@ class SpotilyzerApp(QMainWindow):
             "Ergebnisse exportieren",
             default_name,
             "JSON (*.json);;CSV (*.csv);;Markdown (*.md);;Text (*.txt)",
+            initial_filter,
         )
         if not path:
             return
