@@ -17,7 +17,7 @@ import torch
 import torchaudio
 from transformers import AutoModel, AutoProcessor
 
-from spotilyzer import MERT_MODEL_NAME, TARGET_SAMPLE_RATE, MAX_AUDIO_LENGTH_SEC
+from spotilyzer import MERT_MODEL_NAME, TARGET_SAMPLE_RATE, MERT_CHUNK_SEC
 from spotilyzer.core._audio_loader import load_audio_file
 
 
@@ -101,17 +101,18 @@ class MERTEmbedder:
 
     def load_audio(self, filepath: Path) -> torch.Tensor:
         """
-        Lädt eine Audio-Datei und preprocessed sie für MERT.
+        Lädt eine Audio-Datei vollständig und preprocessed sie für MERT.
 
         - Konvertiert zu Mono
         - Resampled auf 24kHz
-        - Beschneidet auf max. 30 Sekunden (Mitte des Tracks)
+        - Kein Längen-Cap: der komplette Track wird zurückgegeben.
+          Chunking erfolgt in process_file() via _chunk_waveform().
 
         Args:
             filepath: Pfad zur Audio-Datei.
 
         Returns:
-            1D Tensor (Mono-Waveform bei 24kHz).
+            1D Tensor (Mono-Waveform bei 24kHz, volle Länge).
 
         Raises:
             RuntimeError: Wenn die Datei nicht geladen werden kann.
@@ -132,13 +133,43 @@ class MERTEmbedder:
             resampler = torchaudio.transforms.Resample(sample_rate, TARGET_SAMPLE_RATE)
             waveform = resampler(waveform)
 
-        # Max. Länge beschneiden (Mitte des Tracks)
-        max_samples = TARGET_SAMPLE_RATE * MAX_AUDIO_LENGTH_SEC
-        if waveform.shape[1] > max_samples:
-            start = (waveform.shape[1] - max_samples) // 2
-            waveform = waveform[:, start : start + max_samples]
-
         return waveform.squeeze(0)
+
+    def _chunk_waveform(self, waveform: torch.Tensor) -> list[torch.Tensor]:
+        """
+        Teilt eine Waveform in überlappungsfreie MERT_CHUNK_SEC-Segmente auf.
+
+        Der letzte Chunk wird mit Stille auf volle Chunk-Länge zero-gepaddet,
+        damit MERT eine konsistente Eingabelänge erhält. Sehr kurze Endstücke
+        (< 5 Sekunden) werden verworfen um Padding-Artefakte zu vermeiden.
+
+        Args:
+            waveform: 1D Tensor (Mono, 24kHz, beliebige Länge).
+
+        Returns:
+            Liste von Tensoren, jeder genau MERT_CHUNK_SEC * TARGET_SAMPLE_RATE Samples.
+        """
+        chunk_samples = TARGET_SAMPLE_RATE * MERT_CHUNK_SEC
+        min_samples = TARGET_SAMPLE_RATE * 5  # Mindestlänge: 5 Sekunden
+        total = waveform.shape[0]
+        chunks: list[torch.Tensor] = []
+
+        for start in range(0, total, chunk_samples):
+            chunk = waveform[start : start + chunk_samples]
+            if chunk.shape[0] < min_samples:
+                break  # Zu kurzes Endstück verwerfen
+            if chunk.shape[0] < chunk_samples:
+                # Letzten Chunk auf volle Länge zero-padden
+                pad = torch.zeros(chunk_samples - chunk.shape[0], dtype=chunk.dtype)
+                chunk = torch.cat([chunk, pad])
+            chunks.append(chunk)
+
+        # Fallback: wenn der Track kürzer als min_samples ist (z.B. sehr kurze Clips)
+        if not chunks:
+            pad = torch.zeros(chunk_samples - waveform.shape[0], dtype=waveform.dtype)
+            chunks.append(torch.cat([waveform, pad]))
+
+        return chunks
 
     @torch.no_grad()
     def extract_embedding(self, waveform: torch.Tensor) -> np.ndarray:
@@ -169,17 +200,23 @@ class MERTEmbedder:
 
     def process_file(self, filepath: Path) -> np.ndarray:
         """
-        Komplette Pipeline: Audio-Datei → 1024-dim Embedding.
+        Komplette Pipeline: Audio-Datei → 1024-dim Embedding (Volltrack).
+
+        Der komplette Track wird in MERT_CHUNK_SEC-Segmente aufgeteilt.
+        Pro Segment wird ein Embedding extrahiert. Das finale Embedding
+        ist das arithmetische Mittel aller Chunk-Embeddings.
 
         Args:
             filepath: Pfad zur Audio-Datei.
 
         Returns:
-            1024-dimensionales numpy Array.
+            1024-dimensionales numpy Array (gemittelt über alle Chunks).
 
         Raises:
             RuntimeError: Bei Fehler in irgendeinem Schritt.
         """
         self._ensure_on_device()
         waveform = self.load_audio(filepath)
-        return self.extract_embedding(waveform)
+        chunks = self._chunk_waveform(waveform)
+        embeddings = [self.extract_embedding(chunk) for chunk in chunks]
+        return np.mean(embeddings, axis=0)

@@ -21,7 +21,7 @@ import torch
 import torchaudio
 from transformers import ClapModel, ClapProcessor
 
-from spotilyzer import CLAP_MODEL_NAME
+from spotilyzer import CLAP_MODEL_NAME, CLAP_CHUNK_SEC
 from spotilyzer.core._audio_loader import load_audio_file
 from spotilyzer.data.models import CLAPResult
 
@@ -163,7 +163,10 @@ class CLAPAnalyzer:
 
     def _load_audio(self, audio_path: Path) -> tuple[np.ndarray, int]:
         """
-        Lädt Audio-Datei als Mono-Numpy-Array.
+        Lädt Audio-Datei vollständig als Mono-Numpy-Array.
+
+        Kein Längen-Cap: der komplette Track wird zurückgegeben.
+        Chunking erfolgt in analyze() via _chunk_waveform().
 
         Returns:
             (waveform_numpy, sample_rate) — CLAP-Processor übernimmt Resampling.
@@ -179,6 +182,35 @@ class CLAPAnalyzer:
             waveform = waveform.mean(dim=0, keepdim=True)
 
         return waveform.squeeze(0).numpy(), sr
+
+    def _chunk_waveform(self, waveform: np.ndarray, sr: int) -> list[np.ndarray]:
+        """
+        Teilt eine Waveform in CLAP_CHUNK_SEC-Segmente auf.
+
+        ClapProcessor trunciert intern auf sein natives Fenster (10s @ 48kHz).
+        Durch explizites Chunking stellen wir sicher, dass der gesamte Track
+        analysiert wird — nicht nur die ersten 10 Sekunden.
+
+        Sehr kurze Endstücke (< 3 Sekunden) werden verworfen.
+
+        Args:
+            waveform: 1D numpy float32 Array (Mono, native sample rate).
+            sr: Sample-Rate der Waveform.
+
+        Returns:
+            Liste von numpy Arrays, jeder max. CLAP_CHUNK_SEC Sekunden lang.
+        """
+        chunk_samples = sr * CLAP_CHUNK_SEC
+        min_samples = sr * 3  # Mindestlänge: 3 Sekunden
+        total = len(waveform)
+        chunks: list[np.ndarray] = []
+
+        for start in range(0, total, chunk_samples):
+            chunk = waveform[start : start + chunk_samples]
+            if len(chunk) >= min_samples:
+                chunks.append(chunk)
+
+        return chunks or [waveform]  # Fallback für sehr kurze Tracks
 
     @torch.no_grad()
     def _get_scores_for_tags(
@@ -228,17 +260,24 @@ class CLAPAnalyzer:
 
         self._ensure_on_device()
 
-        # Audio laden (als numpy für Processor)
+        # Audio laden (vollständiger Track, kein Cap)
         waveform, sr = self._load_audio(audio_path)
+        chunks = self._chunk_waveform(waveform, sr)
 
-        # Pro Tag-Set: Scores berechnen
+        # Pro Tag-Set: Scores über alle Chunks mitteln
         result_scores: dict[str, dict[str, float]] = {}
         all_scores: dict[str, float] = {}
 
         for set_name, tags in tag_sets.items():
             if not tags:
                 continue
-            scores_arr = self._get_scores_for_tags(waveform, sr, tags)
+
+            # Scores pro Chunk sammeln, dann arithmetisch mitteln
+            chunk_scores: list[np.ndarray] = []
+            for chunk in chunks:
+                chunk_scores.append(self._get_scores_for_tags(chunk, sr, tags))
+            scores_arr = np.mean(chunk_scores, axis=0)
+
             scores = {tag: float(s) for tag, s in zip(tags, scores_arr)}
             result_scores[set_name] = scores
             all_scores.update(scores)
