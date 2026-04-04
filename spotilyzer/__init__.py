@@ -17,7 +17,11 @@ SUPPORTED_FORMATS = {".mp3", ".flac", ".wav", ".ogg", ".m4a", ".aac", ".wma"}
 MERT_MODEL_NAME = "m-a-p/MERT-v1-330M"
 MERT_EMBEDDING_DIM = 1024          # 95M → 768, 330M → 1024
 TARGET_SAMPLE_RATE = 24000
-MAX_AUDIO_LENGTH_SEC = 30
+MERT_CHUNK_SEC = 30                # Chunk-Größe für MERT-Inferenz; Volltracks werden in
+                                   # 30s-Segmente aufgeteilt und deren Embeddings gemittelt.
+                                   # (MERT-Transformer: O(n²) Attention → kein Full-Track-Modus)
 
 # CLAP-Konfiguration
 CLAP_MODEL_NAME = "laion/larger_clap_music"
+CLAP_CHUNK_SEC = 10                # Natives CLAP-Fenster (ClapProcessor trunciert auf 10s);
+                                   # Volltracks werden in 10s-Segmente aufgeteilt.
