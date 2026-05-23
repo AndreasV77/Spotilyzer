@@ -13,66 +13,66 @@ The PySide6 GUI rewrite (from Tkinter) was designed around three pillars:
 
 ### Dual-Goal Architecture
 
-**Ziel 1 (Priorität):** Neutral-informationsorientierte Song-Analyse. Technische und musikalische Daten zur Reproduzierbarkeit eines Sounds, Stärken/Schwächen-Analyse.
+**Goal 1 (Priority):** Neutral, information-oriented song analysis. Technical and musical data for reproducing a sound and identifying strengths/weaknesses.
 
-**Ziel 2:** Hit-Potential-Bewertung als Entscheidungshilfe für Release-Priorisierung und Plattform-Performance-Einschätzung (TikTok etc.).
+**Goal 2:** Hit-potential assessment as decision support for release prioritization and platform performance estimation (TikTok etc.).
 
-Bei Unklarheit: Ziel 1 hat Vorrang.
+When in doubt: Goal 1 takes priority.
 
 Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/larger_clap_music`.
 
 ---
 
-## Repository-Informationen
+## Repository Information
 
-| | Dieses Projekt | Training-Subprojekt |
+| | This Project | Training Sub-project |
 |---|----------------|---------------------|
-| **Zweck** | GUI, CLI, Analyse-Pipeline | Datenakquise, Labeling, Modell-Training |
-| **Lokal** | `G:\Dev\source\Spotilyzer` | `G:\Dev\source\SpotilyzerTraining` |
+| **Purpose** | GUI, CLI, analysis pipeline | Data acquisition, labeling, model training |
+| **Local** | `G:\Dev\source\Spotilyzer` | `G:\Dev\source\SpotilyzerTraining` |
 | **GitHub** | `github.com/AndreasV77/Spotilyzer` | `github.com/AndreasV77/SpotilyzerTraining` |
 
 ---
 
-## WICHTIG: Training-Subprojekt
+## IMPORTANT: Training Sub-project
 
-**Das Modell-Training wurde in ein separates Repository ausgelagert.**
+**Model training has been moved to a separate repository.**
 
-### Was gehört wohin?
+### What Goes Where?
 
-| Aufgabe | Repository |
+| Task | Repository |
 |---------|------------|
-| GUI, CLI, Analyse-Pipeline | **Spotilyzer** (hier) |
-| Deezer-Scouting, Preview-Download | **SpotilyzerTraining** |
-| Last.fm-Enrichment | **SpotilyzerTraining** |
-| Label-Berechnung, Sample-Gewichtung | **SpotilyzerTraining** |
-| XGBoost-Training | **SpotilyzerTraining** |
-| MERT-Embedding-Extraktion | **SpotilyzerTraining** |
-| Fertiges Modell (.joblib) | Wird von Training → Spotilyzer kopiert |
+| GUI, CLI, analysis pipeline | **Spotilyzer** (here) |
+| Deezer scouting, preview download | **SpotilyzerTraining** |
+| Last.fm enrichment | **SpotilyzerTraining** |
+| Label calculation, sample weighting | **SpotilyzerTraining** |
+| XGBoost training | **SpotilyzerTraining** |
+| MERT embedding extraction | **SpotilyzerTraining** |
+| Finished model (.joblib) | Copied from Training → Spotilyzer |
 
-### Interface zwischen den Projekten
+### Interface Between Projects
 
 **Input (Training → Spotilyzer):**
-- `models/spotilyzer_model.joblib` — trainiertes XGBoost-Modell
-- `models/training_report.json` — Trainings-Metadaten (optional)
+- `models/spotilyzer_model.joblib` — trained XGBoost model
+- `models/training_report.json` — training metadata (optional)
 
-**Das Hauptprojekt hat KEINE Abhängigkeit zum Training-Repo.** Es konsumiert nur das fertige Modell.
+**The main project has NO dependency on the training repo.** It only consumes the finished model.
 
-### Bei Training-bezogenen Fragen
+### For Training-Related Questions
 
-→ Siehe `G:\Dev\source\SpotilyzerTraining\CLAUDE.md`
+→ See `G:\Dev\source\SpotilyzerTraining\CLAUDE.md`
 
-**NICHT in diesem Repo:**
-- Datenquellen ändern/erweitern
-- Label-Strategie anpassen
-- Neue Genre-Cluster definieren
-- Modell-Architektur ändern
+**NOT in this repo:**
+- Modify/extend data sources
+- Adjust label strategy
+- Define new genre clusters
+- Change model architecture
 
 ---
 
 ## Setup
 
-- **Python**: 3.12 (dev env); minimum 3.10 per `pyproject.toml`; venv at `.venv-spotilyzer/` (5.7 GB inkl. CUDA-Libs)
-- **Activate**: `.\.venv-spotilyzer\Scripts\Activate.ps1` (PowerShell)
+- **Python**: 3.12 (dev env); minimum 3.10 per `pyproject.toml`; venv at `.venv-spotilyzer/` (5.7 GB incl. CUDA libs)
+- **Activate**: `.\venv-spotilyzer\Scripts\Activate.ps1` (PowerShell)
 - **Install core**: `pip install -e .`
 - **Install with dev deps**: `pip install -e ".[dev]"` (adds pyinstaller, pytest)
 - **Model required**: `models/spotilyzer_model.joblib` must exist before running
@@ -131,6 +131,11 @@ spotilyzer/              # installable package (pyproject.toml), version 2.0.0
     models.py            # AnalysisResult, AudioInfo, ModelInfo, CLAPResult,
                          # Rating/AppMode/SortMode enums
     persistence.py       # save_results(), load_results(), ResultExporter (JSON/CSV/MD/TXT)
+  locale/
+    __init__.py          # t() translation function, load() locale loader
+    EN/
+      __init__.py
+      strings.py         # All English UI strings
 legacy/                  # archived old Spotify-API-based scripts (read-only reference)
 resources/               # GUI assets (icons, images)
 models/                  # spotilyzer_model.joblib + training_report.json (bundled in exe)
@@ -139,15 +144,15 @@ analyze_track.py         # legacy standalone CLI (predates spotilyzer.cli packag
 spotilyzer_gui.py        # legacy Tkinter GUI (predates PySide6 rewrite)
 ```
 
-### Legacy-Ordner `training/` (DEPRECATED)
+### Legacy `training/` Folder (DEPRECATED)
 
-Der `training/`-Ordner in diesem Repository ist **veraltet**. Die aktiven Training-Skripte befinden sich in:
+The `training/` folder in this repository is **outdated**. The active training scripts are in:
 
 ```
 G:\Dev\source\SpotilyzerTraining\
 ```
 
-Die alten Skripte bleiben als Referenz erhalten, sollten aber nicht mehr verwendet werden.
+The old scripts are kept as reference but should no longer be used.
 
 ## Key Design Decisions
 
@@ -210,22 +215,22 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 ## Model Performance (current)
 
-Alle Metriken auf echtem Holdout-Set (20%, 4545 Samples). Quelle: SpotilyzerTraining `evaluation_report_*.json`.
+All metrics on real holdout set (20%, 4545 samples). Source: SpotilyzerTraining `evaluation_report_*.json`.
 
-### Aktives Modell: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (1024-dim)
+### Active Model: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (1024-dim)
 
-Trainiert auf **~22.722 validated Samples** (Deezer-Scouting + Spotify Top 200 Charts + Kworb historische Charts, 12 Märkte). ~14.991 Hits. XGBoost: max_depth=4, colsample=0.6, n_estimators=500.
+Trained on **~22,722 validated samples** (Deezer scouting + Spotify Top 200 Charts + Kworb historical charts, 12 markets). ~14,991 Hits. XGBoost: max_depth=4, colsample=0.6, n_estimators=500.
 
-| Metric | Value | Ziel |
-|--------|-------|------|
+| Metric | Value | Target |
+|--------|-------|--------|
 | Balanced Accuracy | **64.2%** | ≥ 65% |
 | Hit Recall | **86.9%** ✓ | ≥ 80% |
 | Flop Recall | **67.5%** ✓ | ≥ 50% |
 | Mid Recall | 34.7% | — |
 
-**Training-Ceiling erreicht (Session 8, 2026-03-31):** Hyperparameter-Sweeps (max_depth 4→6, colsample 0.6→0.8) zeigen monotonen Trade-off: mehr Tiefe → Hit Recall ↑, BA/Flop ↓. Optimum bei depth=4, col=0.6. Post-hoc Logit-Adjustment (τ=0.25) erreicht BA=65.3% aber Hit Recall sinkt auf 73.2% — beide Ziele gleichzeitig technisch nicht erreichbar. Audio-only Decke bei ~64–65% BA. Nächste BA-Verbesserung erfordert zusätzliche Features (librosa, Metadaten) oder Artist-Dedup im Training.
+**Training ceiling reached (Session 8, 2026-03-31):** Hyperparameter sweeps (max_depth 4→6, colsample 0.6→0.8) show monotonic trade-off: more depth → Hit Recall ↑, BA/Flop ↓. Optimum at depth=4, col=0.6. Post-hoc logit adjustment (τ=0.25) achieves BA=65.3% but Hit Recall drops to 73.2% — both targets simultaneously not achievable technically. Audio-only ceiling at ~64–65% BA. Next BA improvement requires additional features (librosa, metadata) or artist dedup in training.
 
-### Vorgänger: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (Session 5, ~8.960 val.)
+### Predecessor: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (Session 5, ~8,960 val.)
 
 | Metric | Value |
 |--------|-------|
@@ -233,15 +238,15 @@ Trainiert auf **~22.722 validated Samples** (Deezer-Scouting + Spotify Top 200 C
 | Hit Recall | 72.8% |
 | Flop Recall | 68.7% ✓ |
 
-**Praktische Verwendung:** Hit Recall-Ziel ≥80% erreicht. Flop-Filter funktioniert gut. Mid-Klasse bleibt schwierig (34.7% Recall) — wird häufig mit Hit verwechselt.
+**Practical use:** Hit Recall target ≥80% reached. Flop filter works well. Mid class remains difficult (34.7% Recall) — frequently confused with Hit.
 
-**Model bias:** 85%+ Confidence = echtes Potential. < 60% = unsicher, als Mid behandeln. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
+**Model bias:** 85%+ confidence = genuine potential. < 60% = uncertain, treat as Mid. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
 
-**Inference speed:** ~0.53s/Track (95M) / ~0.8s/Track (330M) auf GTX 1660 Ti.
+**Inference speed:** ~0.53s/track (95M) / ~0.8s/track (330M) on GTX 1660 Ti.
 
-**Modell-Vergleich:** Siehe `models/MODEL_COMPARISON.md`.
+**Model comparison:** See `models/MODEL_COMPARISON.md`.
 
-**Zur Verbesserung:** Training-Hyperparameter-Raum ausgeschöpft. BA-Steigerung über 65% erfordert Artist-level Dedup im Training (GroupKFold), librosa-Features, oder LightGBM-Vergleich. → SpotilyzerTraining.
+**For improvement:** Training hyperparameter space exhausted. BA improvement beyond 65% requires artist-level dedup in training (GroupKFold), librosa features, or LightGBM comparison. → SpotilyzerTraining.
 
 ## Known Issues & Gotchas
 
@@ -262,7 +267,7 @@ Trainiert auf **~22.722 validated Samples** (Deezer-Scouting + Spotify Top 200 C
 ## Export Formats
 
 | Format | Purpose |
-|--------|---------|
+|--------|----------|
 | JSON | Default, re-importable, same schema as auto-save |
 | CSV | Tabular, Excel-compatible |
 | MD | Formatted report with table + medals |
@@ -272,24 +277,24 @@ Trainiert auf **~22.722 validated Samples** (Deezer-Scouting + Spotify Top 200 C
 
 ## NEXT TASK: LAION CLAP Integration
 
-### Ziel
+### Goal
 
-Zero-Shot Genre/Mood-Klassifikation als neues Analyse-Feature. CLAP (Contrastive Language-Audio Pretraining) ermöglicht Text-Audio-Alignment: beliebige Tags gegen Audio prüfen, ohne Training.
+Zero-shot genre/mood classification as a new analysis feature. CLAP (Contrastive Language-Audio Pretraining) enables text-audio alignment: check arbitrary tags against audio without training.
 
-### Modell
+### Model
 
-`laion/larger_clap_music` auf HuggingFace
-- Musik-spezialisiert (528K Downloads)
-- Native `transformers`-Integration
+`laion/larger_clap_music` on HuggingFace
+- Music-specialized (528K downloads)
+- Native `transformers` integration
 - ~600 MB VRAM
-- Apache 2.0 Lizenz
+- Apache 2.0 license
 
-### Implementierung
+### Implementation
 
-**Neues Modul:** `spotilyzer/core/clap_analyzer.py`
+**New module:** `spotilyzer/core/clap_analyzer.py`
 
 ```python
-# Singleton-Pattern wie MERTEmbedder
+# Singleton pattern like MERTEmbedder
 class CLAPAnalyzer:
     _instance = None
     
@@ -300,23 +305,23 @@ class CLAPAnalyzer:
     def analyze(self, audio_path: Path, tag_sets: dict[str, list[str]]) -> CLAPResult:
         """
         Args:
-            audio_path: Pfad zur Audio-Datei
+            audio_path: Path to the audio file
             tag_sets: {"genre": ["metal", "pop", ...], "mood": ["aggressive", "melancholic", ...]}
         
         Returns:
-            CLAPResult mit Similarity-Scores pro Tag-Set
+            CLAPResult with similarity scores per tag set
         """
         ...
 ```
 
-**Neues Datenmodell:** `spotilyzer/data/models.py`
+**New data model:** `spotilyzer/data/models.py`
 
 ```python
 @dataclass
 class CLAPResult:
     genre_scores: dict[str, float]    # {"metal": 0.72, "pop": 0.18, ...}
     mood_scores: dict[str, float]     # {"aggressive": 0.65, "melancholic": 0.12, ...}
-    top_tags: list[str]               # Top-5 über alle Sets
+    top_tags: list[str]               # Top-5 across all sets
     
     def to_dict(self) -> dict: ...
     
@@ -324,76 +329,76 @@ class CLAPResult:
     def from_dict(cls, data: dict) -> "CLAPResult": ...
 ```
 
-### Hardware-Policy (WICHTIG)
+### Hardware Policy (IMPORTANT)
 
-Aktuelle Hardware: GTX 1660 Ti (6 GB VRAM)
-Geplant: Upgrade auf 16+ GB
+Current hardware: GTX 1660 Ti (6 GB VRAM)
+Planned: Upgrade to 16+ GB
 
-**Architektur-Regeln:**
-1. Lazy-Loading für CLAP-Modell (nicht beim Start laden)
-2. Sequentielles Laden möglich: MERT entladen → CLAP laden → analysieren → CLAP entladen → MERT laden
-3. Config-Parameter: `vram_mode: "parallel" | "sequential"`
-4. Mit 16 GB später: beide Modelle parallel im VRAM
+**Architecture rules:**
+1. Lazy-loading for CLAP model (do not load at startup)
+2. Sequential loading possible: offload MERT → load CLAP → analyze → offload CLAP → load MERT
+3. Config parameter: `vram_mode: "parallel" | "sequential"`
+4. With 16 GB later: both models in VRAM simultaneously
 
-**KEINE Architektur-Entscheidungen auf Basis der 6 GB-Limitierung treffen.**
+**DO NOT make architecture decisions based on the 6 GB limitation.**
 
-### Akzeptanzkriterien
+### Acceptance Criteria
 
-- [x] `CLAPAnalyzer` Singleton mit lazy-loading
-- [x] `CLAPResult` Dataclass mit Serialisierung
-- [x] Konfigurierbare Tag-Sets (nicht hardcoded)
-- [x] Integration in CLI: `--include-clap` Flag
-- [x] Integration in GUI: Settings-Checkbox + Anzeige in Result-Card (PRO-Mode)
-- [x] Sequentieller VRAM-Modus funktioniert auf 6 GB
-- [ ] Tests für Similarity-Berechnung
+- [x] `CLAPAnalyzer` singleton with lazy-loading
+- [x] `CLAPResult` dataclass with serialization
+- [x] Configurable tag sets (not hardcoded)
+- [x] CLI integration: `--include-clap` flag
+- [x] GUI integration: settings checkbox + display in Result-Card (PRO mode)
+- [x] Sequential VRAM mode works on 6 GB
+- [ ] Tests for similarity calculation
 
-### Referenz-Dokumente
+### Reference Documents
 
-- `!BU/Spotilyzer_Feature_Matrix.md` — Übersicht aller geplanten Features
-- `!BU/Spotilyzer_GenAI_Encoder_Analysis.md` — Detailanalyse CLAP vs. HeartCLAP vs. ACE-Step
+- `!BU/Spotilyzer_Feature_Matrix.md` — overview of all planned features
+- `!BU/Spotilyzer_GenAI_Encoder_Analysis.md` — detailed analysis CLAP vs. HeartCLAP vs. ACE-Step
 
 ---
 
 ## Roadmap
 
 **Outstanding (near-term):**
-- ~~**CLAP GUI-Integration**~~ ✅ — Settings-Checkbox (PRO mode) + CLAPResult in ResultCard implementiert
-- ~~**librosa BPM-Fix**~~ ✅ — librosa Dynamic-Programming Beat Tracker + Oktavkorrektur (Session 9, 2026-04-01)
-- ~~**librosa Energy-Ersatz**~~ ✅ — Spectral Centroid (Hz), Flatness (0-1), Onset Rate (/s) in AudioInfo (Session 9)
-- ~~**`spotilyzer/analysis/` Phase-1-Modul**~~ ✅ — spectral, temporal, production features + FeatureExtractor + to_ki_context() (Session 9)
-- ~~**Key-Erkennung**~~ ✅ — chroma_cqt + chroma_cens (librosa) statt manuelles STFT-Loop (Session 9)
-- ~~**`spotilyzer/analysis/` Phase-2-Modul**~~ ✅ — DiagnosticResult (7-Band Mix-Analyse) + RoleResult (HPSS Instrument-Rollen) (Session 10, 2026-04-02)
-- ~~**CLI `--full-analysis` / `--no-rating`**~~ ✅ — Spektral-Analyse in CLI integriert (Session 10)
-- ~~**CLI `--threesome` Batch-Modus**~~ ✅ — BPM/LUFS/TruePeak/PLR/Key als Tabelle, Ordner+Glob-Support (Session 10)
-- ~~**True Peak EBU R128**~~ ✅ — 4× Oversampling via scipy.signal.resample_poly, erkennt Inter-Sample-Clipping (Session 10)
-- ~~95M-Neutraining~~ ✅ — MERTv195M_20260317 trainiert (BA=47.8%, Hit=5.6% — schlechter als 330M, noch nicht deployed)
+- ~~**CLAP GUI integration**~~ ✅ — Settings checkbox (PRO mode) + CLAPResult in ResultCard implemented
+- ~~**librosa BPM fix**~~ ✅ — librosa Dynamic-Programming Beat Tracker + octave correction (Session 9, 2026-04-01)
+- ~~**librosa Energy replacement**~~ ✅ — Spectral Centroid (Hz), Flatness (0-1), Onset Rate (/s) in AudioInfo (Session 9)
+- ~~**`spotilyzer/analysis/` Phase-1 module**~~ ✅ — spectral, temporal, production features + FeatureExtractor + to_ki_context() (Session 9)
+- ~~**Key detection**~~ ✅ — chroma_cqt + chroma_cens (librosa) instead of manual STFT loop (Session 9)
+- ~~**`spotilyzer/analysis/` Phase-2 module**~~ ✅ — DiagnosticResult (7-band mix analysis) + RoleResult (HPSS instrument roles) (Session 10, 2026-04-02)
+- ~~**CLI `--full-analysis` / `--no-rating`**~~ ✅ — spectral analysis integrated into CLI (Session 10)
+- ~~**CLI `--threesome` batch mode**~~ ✅ — BPM/LUFS/TruePeak/PLR/Key as table, folder+glob support (Session 10)
+- ~~**True Peak EBU R128**~~ ✅ — 4× oversampling via scipy.signal.resample_poly, detects inter-sample clipping (Session 10)
+- ~~95M retraining~~ ✅ — MERTv195M_20260317 trained (BA=47.8%, Hit=5.6% — worse than 330M, not yet deployed)
 
 **Medium-term:**
-- **Essentia-Integration** — Stub `analysis/essentia_features.py` vorhanden (key+danceability+rhythm). Kein PyPI-Wheel für Windows; benötigt MSVC + CMake + Eigen3 + libav via vcpkg zum Kompilieren. WSL/Conda ausgeschlossen. Revisit wenn nativer Windows-Build stabil. **Nicht in portable EXE bundeln** (native C++-Deps, PyInstaller-inkompatibel).
-- ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall ≥80% erreicht (86.9%, Session 6)
-- ~~Mehr Hit-Samples via Kworb-Scraper + Spotify Charts~~ ✅ — 22.722 Samples, Hit Recall 86.9% (SpotilyzerTraining Sessions 5–6)
+- **Essentia integration** — Stub `analysis/essentia_features.py` present (key+danceability+rhythm). No PyPI wheel for Windows; requires MSVC + CMake + Eigen3 + libav via vcpkg to compile. WSL/Conda excluded. Revisit when native Windows build is stable. **Do not bundle in portable EXE** (native C++ deps, PyInstaller-incompatible).
+- ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall ≥80% reached (86.9%, Session 6)
+- ~~More hit samples via Kworb scraper + Spotify Charts~~ ✅ — 22,722 samples, Hit Recall 86.9% (SpotilyzerTraining Sessions 5–6)
 - "Sounds like..." — similarity search in embedding space
 - Genre classification — second model for cluster assignment
 - In-app genre cluster editor + scouting trigger (PRO mode)
 - Model comparison panel (PRO mode)
 - ~~HF token support (`HF_TOKEN` env var)~~ ✅ — set as Windows user env var
-- ACE-Step Auto-Labeling (BPM/Key/TimeSignature validation)
+- ACE-Step auto-labeling (BPM/Key/TimeSignature validation)
 - HeartCLAP evaluation (if LAION CLAP insufficient for music)
 
 **Long-term:**
 - Genre-specific models (one per cluster)
 - Portable Windows EXE (PyInstaller + CUDA strip, targeting ~3 GB)
-- Stem-basierte Analyse (Demucs/MDX-Net Integration)
-- BA ≥65% via GroupKFold-Training (Artist-Dedup) oder zusätzliche Features (SpotilyzerTraining)
+- Stem-based analysis (Demucs/MDX-Net integration)
+- BA ≥65% via GroupKFold training (artist dedup) or additional features (SpotilyzerTraining)
 
 ---
 
-## Bekannte Audio-Metriken-Probleme (v2.0)
+## Known Audio Metrics Issues (v2.0)
 
-| Metrik | Problem | Fix |
-|--------|---------|-----|
-| ~~**LUFS**~~ | ~~RMS-Approximation, nicht EBU R128~~ | ✅ `pyloudnorm` integriert (EBU R128 K-weighting) |
-| ~~**BPM**~~ | ~~Tempo-Verdopplung/-Halbierung~~ | ✅ librosa DP Beat Tracker + Oktavkorrektur (Session 9) |
-| ~~**Energy**~~ | ~~Willkürliche Skalierung, unklare Definition~~ | ✅ Spectral Centroid, Flatness, Onset Rate (Session 9) |
-| ~~**True Peak**~~ | ~~Sample-Maximum erkennt kein Inter-Sample-Clipping~~ | ✅ 4× Oversampling EBU R128 via scipy (Session 10) |
-| **BPM Metrik-Ebene** | Beat Tracker trifft Quarter-Note-Puls, nicht immer die wahrgenommene Ebene (Half-Time/Double-Time-Feel) | Offen — erfordert genre-spezifische Heuristik |
+| Metric | Issue | Fix |
+|--------|-------|-----|
+| ~~**LUFS**~~ | ~~RMS approximation, not EBU R128~~ | ✅ `pyloudnorm` integrated (EBU R128 K-weighting) |
+| ~~**BPM**~~ | ~~Tempo doubling/halving~~ | ✅ librosa DP beat tracker + octave correction (Session 9) |
+| ~~**Energy**~~ | ~~Arbitrary scaling, unclear definition~~ | ✅ Spectral Centroid, Flatness, Onset Rate (Session 9) |
+| ~~**True Peak**~~ | ~~Sample maximum does not detect inter-sample clipping~~ | ✅ 4× oversampling EBU R128 via scipy (Session 10) |
+| **BPM metric level** | Beat tracker hits quarter-note pulse, not always the perceived level (half-time/double-time feel) | Open — requires genre-specific heuristic |
