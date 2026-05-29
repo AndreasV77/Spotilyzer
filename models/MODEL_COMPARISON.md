@@ -13,7 +13,7 @@
 
 ## Aktive Modelle (Stand: 2026-05-29)
 
-### Default: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260331.joblib`
+### Default: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260529.joblib`
 
 | Metrik | Wert | Ziel | Status |
 |---|---|---|---|
@@ -55,7 +55,8 @@
 | `MERTv1330M_main+spotify_charts_validated_20260319` | 4 | 5.660 val. | 1.132 | 60,9 % | 55,1 % | 69,2 % |
 | `MERTv1330M_main+spotify_charts+kworb_validated_20260319` | 5 | 8.960 val. | 1.173 | 63,0 % | 72,8 % | 68,7 % |
 | `MERTv1330M_main+spotify_charts+kworb_validated_20260319` | 6 | 22.722 val. | 4.545 | 64,2 % | 82,5 % | 73,5 % |
-| **`MERTv1330M_main+spotify_charts+kworb_validated_20260331`** | **8** | **22.722 val.** | **4.545** | 63,0 % | **86,9 %** | 67,5 % |
+| `MERTv1330M_main+spotify_charts+kworb_validated_20260331` | 8 | 22.722 val. | 4.545 | 63,0 % | 86,9 % | 67,5 % |
+| **`MERTv1330M_main+spotify_charts+kworb_validated_20260529`** | **10** | **22.722 val.** | **4.545** | **63,0 %** | **86,9 %** | **67,5 %** |
 
 *\* Session-1-Modell hatte Label-Swap-Bug (hit/mid vertauscht im Report) — Wert nicht direkt vergleichbar.*
 
@@ -69,7 +70,8 @@ Session 3 (5.262 Samples,    637 Hits):  37,5 %
 Session 4 (5.660 Samples,  1.216 Hits):  55,1 %  (+17,6 pp)
 Session 5 (8.960 Samples,  3.713 Hits):  72,8 %  (+17,7 pp)
 Session 6 (22.722 Samples, 14.991 Hits): 82,5 %  (+9,7 pp)  ✅ Ziel erreicht
-Session 8 (depth=5):                     86,9 %  (+4,4 pp)  (Default-Modell)
+Session 8 (depth=5):                     86,9 %  (+4,4 pp)
+Session 10 (retrain, depth=5):           86,9 %  (=)        ← Default-Modell
 ```
 
 ---

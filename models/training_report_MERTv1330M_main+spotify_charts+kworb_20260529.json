@@ -1,0 +1,96 @@
+{
+  "created": "2026-05-29T16:45:38.238269",
+  "dataset": {
+    "n_samples": 22722,
+    "n_features": 1024,
+    "label_distribution": {
+      "hit": 14991,
+      "mid": 5655,
+      "flop": 2076
+    },
+    "robustness_distribution": {
+      "validated": 22722
+    },
+    "sample_weight_stats": {
+      "min": 1.0,
+      "max": 1.0,
+      "mean": 1.0
+    }
+  },
+  "model": {
+    "type": "XGBClassifier",
+    "params_source": "models.MERT-v1-330M",
+    "params": {
+      "n_estimators": 500,
+      "max_depth": 5,
+      "learning_rate": 0.05,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 3,
+      "gamma": 0.1,
+      "reg_alpha": 0.5,
+      "reg_lambda": 2,
+      "objective": "multi:softprob",
+      "num_class": 3,
+      "eval_metric": "mlogloss"
+    },
+    "experiment_label": null,
+    "sample_weight": true,
+    "max_hits": null,
+    "class_weight_boost": {
+      "hit": 1.0,
+      "mid": 1.0,
+      "flop": 1.0
+    }
+  },
+  "metrics": {
+    "accuracy": 0.7212321232123212,
+    "balanced_accuracy": 0.6300836822521588,
+    "f1_macro": 0.622353037267666,
+    "f1_weighted": 0.7078887280454604,
+    "confusion_matrix": [
+      [
+        280,
+        49,
+        86
+      ],
+      [
+        46,
+        2606,
+        347
+      ],
+      [
+        145,
+        594,
+        392
+      ]
+    ],
+    "per_class": {
+      "flop": {
+        "precision": 0.5944798301486199,
+        "recall": 0.6746987951807228,
+        "f1": 0.6320541760722348,
+        "support": 415
+      },
+      "hit": {
+        "precision": 0.8020929516774392,
+        "recall": 0.8689563187729243,
+        "f1": 0.8341869398207427,
+        "support": 2999
+      },
+      "mid": {
+        "precision": 0.47515151515151516,
+        "recall": 0.34659593280282935,
+        "f1": 0.40081799591002043,
+        "support": 1131
+      }
+    },
+    "cv_balanced_accuracy_mean": 0.608220386768804,
+    "cv_balanced_accuracy_std": 0.005590622771743489
+  },
+  "target_metrics": {
+    "flop_recall_min": 0.5,
+    "hit_recall_min": 0.8,
+    "balanced_accuracy_min": 0.65
+  }
+}
