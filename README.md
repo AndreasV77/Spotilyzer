@@ -23,7 +23,7 @@ spotilyzer
 spotilyzer-cli "my_track.mp3"
 ```
 
-> **First launch:** MERT-v1-95M (~380 MB) is automatically downloaded from HuggingFace
+> **First launch:** MERT-v1-330M (~1.3 GB) is automatically downloaded from HuggingFace
 > and cached at `~/.cache/huggingface/hub/`. Internet connection required.
 
 > **Model required:** `models/spotilyzer_model.joblib` must be present.
@@ -42,16 +42,16 @@ spotilyzer-cli "my_track.mp3"
 
 ## Model Performance (current)
 
-Trained on **~8,960 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 6 markets), 1024-dim MERT-v1-330M embeddings. Holdout set: 1173 samples (20%).
+Trained on **~22,722 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 12 markets), 1024-dim MERT-v1-330M embeddings. Holdout set: 4545 samples (20%).
 
-| Metric            | Value          |
-|-------------------|----------------|
-| Balanced Accuracy | **63.0 %**     |
-| Hit Recall        | **72.8 %**     |
-| Flop Recall       | **68.7 %** ✓  |
+| Metric            | Value          | Target |
+|-------------------|----------------|--------|
+| Balanced Accuracy | **64.2 %**     | ≥ 65 % |
+| Hit Recall        | **86.9 %** ✓   | ≥ 80 % |
+| Flop Recall       | **67.5 %** ✓   | ≥ 50 % |
 
 **Interpretation:** ≥ 85 % confidence = genuine potential. < 60 % = uncertain, treat as Mid.
-Inference: ~0.8 s/track on GTX 1660 Ti. Hit Recall improves continuously — currently 72.8 % (target ≥ 80 %).
+Inference: ~0.8 s/track on GTX 1660 Ti.
 
 ---
 
@@ -102,7 +102,7 @@ Training runs in the separate repository [SpotilyzerTraining](https://github.com
 - **Kworb.net** — historical chart data (peak_position, weeks_in_chart)
 - **MusicBrainz API** — ISRC lookup for deduplication
 
-**Current dataset:** 5,660 validated samples, 1,216 hits, 23 genre clusters + charts
+**Current dataset:** ~22,722 validated samples, ~14,991 hits, 23 genre clusters + chart expansion across 12 markets
 
 **Deployment:**
 ```powershell
@@ -119,7 +119,7 @@ Copy-Item outputs/reports/training_report_MERTv1330M_*_validated_*.json   ..\Spo
 spotilyzer/          # Installable package
   core/
     pipeline.py      # AnalysisPipeline — orchestrates Embedder + Predictor + AudioInfo
-    embedder.py      # MERTEmbedder (Singleton) — MERT-v1-95M, 768-dim
+    embedder.py      # MERTEmbedder (Singleton) — MERT-v1-330M, 1024-dim
     predictor.py     # SpotilyzerPredictor — XGBoost wrapper
     audio_info.py    # BPM, LUFS, Key, Format, Waveform
   cli/
@@ -161,7 +161,7 @@ pyinstaller spotilyzer.spec
 python strip_cuda.py
 ```
 
-MERT (~380 MB) is **not** bundled — downloaded on first launch.
+MERT (~1.3 GB) is **not** bundled — downloaded on first launch.
 Total size after strip: ~3 GB.
 
 ---
@@ -171,7 +171,6 @@ Total size after strip: ~3 GB.
 - **App icon:** `resources/spotilyzer.ico` missing — window shows default Qt icon
 - **Drag & Drop + Admin shell (Windows):** D&D from Explorer doesn't work when the app
   runs in an elevated shell (Windows UIPI). Fix: run app without admin or use the file dialog
-- **Flop Recall weak (26.8 %):** More Flop training samples needed
 
 ---
 
@@ -183,7 +182,7 @@ Total size after strip: ~3 GB.
 - In-app model download (instead of local training)
 
 **Medium-term**
-- "Sounds like …" — similarity search in embedding space
+- "Sounds like ..." — similarity search in embedding space
 - Genre classification (second model)
 - Genre cluster editor in GUI (PRO mode)
 

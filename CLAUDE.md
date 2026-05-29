@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Spotilyzer (v2.0) is an ML-based audio analysis tool that classifies tracks as **Hit / Mid / Flop** based on mainstream compatibility. Pipeline: audio file → MERT-v1-95M embeddings (768-dim) → XGBoost 3-class classifier → GUI or CLI output.
+Spotilyzer (v2.0) is an ML-based audio analysis tool that classifies tracks as **Hit / Mid / Flop** based on mainstream compatibility. Pipeline: audio file → MERT-v1-330M embeddings (1024-dim) → XGBoost 3-class classifier → GUI or CLI output.
 
 The PySide6 GUI rewrite (from Tkinter) was designed around three pillars:
 - **Three view modes**: Simple (drop zone only) / Balanced (default) / Pro (all dock panels)
@@ -30,6 +30,22 @@ Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/large
 | **Purpose** | GUI, CLI, analysis pipeline | Data acquisition, labeling, model training |
 | **Local** | `G:\Dev\source\Spotilyzer` | `G:\Dev\source\SpotilyzerTraining` |
 | **GitHub** | `github.com/AndreasV77/Spotilyzer` | `github.com/AndreasV77/SpotilyzerTraining` |
+
+---
+
+## Translation Policy
+
+When translating between any language pair (e.g., DE↔EN, EN↔JP) anywhere in this
+repository — documentation (CLAUDE.md, README.md), code comments, docstrings,
+runtime strings, or UI locale files (`locale/*`) — technical correctness and
+clarity take priority over tonal fidelity.
+
+- Idiomatic, humorous, or culturally specific phrasings should be rendered as
+  neutral, precise statements in the target language. No clarification question
+  required.
+- Exception: passages of clear literary merit may be preserved verbatim. Append
+  the original to `poetry_collection.md` in the repo root (creating it if
+  needed) with source language and context, then translate neutrally in place.
 
 ---
 
@@ -76,7 +92,7 @@ Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/large
 - **Install core**: `pip install -e .`
 - **Install with dev deps**: `pip install -e ".[dev]"` (adds pyinstaller, pytest)
 - **Model required**: `models/spotilyzer_model.joblib` must exist before running
-- **MERT model** (~380 MB): auto-downloaded by HuggingFace `transformers` on first run to `~/.cache/huggingface/hub/`
+- **MERT-v1-330M model** (~1.3 GB): auto-downloaded by HuggingFace `transformers` on first run to `~/.cache/huggingface/hub/`
 - **CLAP model** (~776 MB): auto-downloaded on first `--include-clap` run to `~/.cache/huggingface/hub/`
 
 ## Common Commands
@@ -174,7 +190,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **Three-tier UX (AppMode)**: all 13 analysis fields are always computed — the tier only controls visibility. `SIMPLE` hides all dock panels; `BALANCED` shows highscore, history, tech panels; `PRO` shows all panels including file browser and settings.
 
-**Result card grid-snap**: Implemented. `ResultCard` uses `CARD_HEIGHTS = {SIMPLE: 68, BALANCED: 88, PRO: 88}` with `setFixedHeight()`. `CentralWidget.resizeEvent` calls `_adjust_results_viewport()` to snap the visible area to a multiple of card height. Scroll step is set to card height. DropZone collapses to 50 px (compact mode) when results are present.
+**Result card grid-snap**: Implemented. `ResultCard` uses `CARD_HEIGHTS = {SIMPLE: 68, BALANCED: 88, PRO: 104}` with `setFixedHeight()`. `CentralWidget.resizeEvent` calls `_adjust_results_viewport()` to snap the visible area to a multiple of card height. Scroll step is set to card height. DropZone collapses to 50px (compact mode) when results are present.
 
 **Auto-save**: results persist to `spotilyzer_results.json` in CWD after each batch. Loaded automatically on startup. Format version `"2.0"`.
 
@@ -184,7 +200,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **Layout persistence**: dock panel positions saved/restored via `QSettings.saveState()` / `restoreState()`. Organization: `"Spotilyzer"`, App: `"Spotilyzer"`.
 
-**Packaging**: PyInstaller `--onedir` via `spotilyzer.spec`. MERT and CLAP (~380 MB / ~776 MB) are NOT bundled — downloaded on first run. After build, `strip_cuda.py` removes unused CUDA DLLs saving ~1.5 GB. Total bundled size ~3 GB.
+**Packaging**: PyInstaller `--onedir` via `spotilyzer.spec`. MERT-v1-330M and CLAP (~1.3 GB / ~776 MB) are NOT bundled — downloaded on first run. After build, `strip_cuda.py` removes unused CUDA DLLs saving ~1.5 GB. Total bundled size ~3 GB.
 
 ## Intended Usage Profile
 
@@ -254,7 +270,7 @@ Trained on **~22,722 validated samples** (Deezer scouting + Spotify Top 200 Char
 
 **PySide6 enum/string coercion:** `QComboBox.currentData()` and `QSettings.value()` return plain strings, not Python enum instances. The codebase guards against this (e.g., `AppMode(str(mode))` in `app.py`, `settings_panel.py`). Don't assume signal payloads are always enum instances when adding new signal connections.
 
-**MERT first-run download:** ~380 MB, requires internet, cached at `~/.cache/huggingface/hub/models--m-a-p--MERT-v1-95M/`.
+**MERT first-run download:** ~1.3 GB, requires internet, cached at `~/.cache/huggingface/hub/models--m-a-p--MERT-v1-330M/`.
 
 **CLAP first-run download:** ~776 MB, cached at `~/.cache/huggingface/hub/models--laion--larger_clap_music/`.
 
@@ -377,7 +393,7 @@ Planned: Upgrade to 16+ GB
 - **Essentia integration** — Stub `analysis/essentia_features.py` present (key+danceability+rhythm). No PyPI wheel for Windows; requires MSVC + CMake + Eigen3 + libav via vcpkg to compile. WSL/Conda excluded. Revisit when native Windows build is stable. **Do not bundle in portable EXE** (native C++ deps, PyInstaller-incompatible).
 - ~~MERT-v1-330M upgrade~~ ✅ — done: embedder switched to `m-a-p/MERT-v1-330M` (1024-dim), XGBoost retrained; Hit Recall ≥80% reached (86.9%, Session 6)
 - ~~More hit samples via Kworb scraper + Spotify Charts~~ ✅ — 22,722 samples, Hit Recall 86.9% (SpotilyzerTraining Sessions 5–6)
-- "Sounds like..." — similarity search in embedding space
+- "Sounds like ..." — similarity search in embedding space
 - Genre classification — second model for cluster assignment
 - In-app genre cluster editor + scouting trigger (PRO mode)
 - Model comparison panel (PRO mode)
