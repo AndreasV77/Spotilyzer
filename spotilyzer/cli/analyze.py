@@ -28,8 +28,14 @@ from spotilyzer.analysis import FeatureExtractor, SpectralAnalysisResult
 
 
 def _find_default_model() -> Path:
-    """Neuestes spotilyzer_model_*.joblib in models/; Fallback auf legacy-Name."""
+    """Active model from active_model.txt; fallback to newest-by-mtime glob."""
     models_dir = Path("models")
+    active_cfg = models_dir / "active_model.txt"
+    if active_cfg.exists():
+        name = active_cfg.read_text().strip()
+        explicit = models_dir / name
+        if explicit.exists():
+            return explicit
     found = sorted(
         models_dir.glob("spotilyzer_model_*.joblib"),
         key=lambda p: p.stat().st_mtime,

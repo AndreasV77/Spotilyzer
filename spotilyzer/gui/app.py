@@ -361,7 +361,14 @@ class SpotilyzerApp(QMainWindow):
             models_dirs.insert(0, Path(sys._MEIPASS) / "models")
 
         for models_dir in models_dirs:
-            # Neuestes spotilyzer_model_*.joblib bevorzugen
+            # Explicit active model config takes priority over mtime
+            active_cfg = models_dir / "active_model.txt"
+            if active_cfg.exists():
+                name = active_cfg.read_text().strip()
+                explicit = models_dir / name
+                if explicit.exists():
+                    return explicit
+            # Fallback: newest by mtime
             found = sorted(
                 models_dir.glob("spotilyzer_model_*.joblib"),
                 key=lambda p: p.stat().st_mtime,

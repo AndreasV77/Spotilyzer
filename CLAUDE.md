@@ -233,13 +233,13 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 All metrics on real holdout set (20%, 4545 samples). Source: SpotilyzerTraining `evaluation_report_*.json`.
 
-### Active Model: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (1024-dim)
+### Active Model: MERTv1330M_main+spotify_charts+kworb_validated_20260529 (1024-dim)
 
-Trained on **~22,722 validated samples** (Deezer scouting + Spotify Top 200 Charts + Kworb historical charts, 12 markets). ~14,991 Hits. XGBoost: max_depth=4, colsample=0.6, n_estimators=500.
+Trained on **~22,722 validated samples** (Deezer scouting + Spotify Top 200 Charts + Kworb historical charts, 12 markets). ~14,991 Hits. XGBoost: max_depth=5, colsample=0.8, n_estimators=500.
 
 | Metric | Value | Target |
 |--------|-------|--------|
-| Balanced Accuracy | **64.2%** | ≥ 65% |
+| Balanced Accuracy | **63.0%** | ≥ 65% |
 | Hit Recall | **86.9%** ✓ | ≥ 80% |
 | Flop Recall | **67.5%** ✓ | ≥ 50% |
 | Mid Recall | 34.7% | — |
