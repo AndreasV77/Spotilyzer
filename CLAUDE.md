@@ -182,7 +182,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **Model file format**: `models/spotilyzer_model.joblib` is a `dict` with keys `"model"` (XGBoost) and `"label_encoder"` (sklearn LabelEncoder). The optional `models/training_report.json` provides metadata shown in the GUI.
 
-**Audio preprocessing**: mono conversion → resample to 24 kHz → clip to center 30 seconds before embedding.
+**Audio preprocessing**: mono conversion → resample to 24 kHz → split into 30s chunks (overlap-free, last chunk zero-padded, <5s tail discarded) → MERT embedding per chunk → XGBoost per chunk → mean(probabilities) → final rating. Each chunk is scored independently, matching the training format (Deezer 30s-previews = 1 chunk = 1 embedding).
 
 **LUFS measurement**: `_estimate_lufs()` in `audio_info.py` uses `pyloudnorm` for full EBU R128 (K-weighting + 400ms block gating). Falls back to RMS→dBFS approximation if pyloudnorm unavailable.
 

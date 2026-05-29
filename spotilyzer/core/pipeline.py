@@ -157,13 +157,13 @@ class AnalysisPipeline:
         timestamp = datetime.now().isoformat()
 
         try:
-            # 1. Embedding extrahieren (MERT)
-            notify(f"Extrahiere Embedding: {filepath.name}...")
-            embedding = self.embedder.process_file(filepath)
+            # 1. Embeddings extrahieren (MERT, ein Embedding pro 30s-Chunk)
+            notify(f"Extrahiere Embeddings: {filepath.name}...")
+            chunk_embeddings = self.embedder.process_file_chunks(filepath)
 
-            # 2. Prediction
+            # 2. Prediction (XGBoost pro Chunk, mean der Wahrscheinlichkeiten)
             notify(f"Analysiere: {filepath.name}...")
-            probabilities, rating, confidence = self.predictor.predict(embedding)
+            probabilities, rating, confidence = self.predictor.predict_chunks(chunk_embeddings)
 
             # 3. Audio-Info (optional)
             audio_info = None

@@ -64,16 +64,13 @@ class SpotilyzerPredictor:
 
     def predict(self, embedding: np.ndarray) -> tuple[dict, str, float]:
         """
-        Prediction: 768-dim Embedding → Probabilities + Label.
+        Prediction: single embedding → probabilities + label.
 
         Args:
-            embedding: 768-dim numpy Array (einzelnes Embedding).
+            embedding: 1024-dim numpy Array.
 
         Returns:
-            Tuple von:
-            - probabilities: Dict {"hit": 0.85, "mid": 0.10, "flop": 0.05}
-            - predicted_label: "hit", "mid" oder "flop"
-            - confidence: float 0.0-1.0 (max probability)
+            Tuple: ({"hit": 0.85, "mid": 0.10, "flop": 0.05}, "hit", 0.85)
         """
         embedding_2d = embedding.reshape(1, -1)
         proba = self.model.predict_proba(embedding_2d)[0]
@@ -87,3 +84,30 @@ class SpotilyzerPredictor:
         }
 
         return prob_dict, pred_label, confidence
+
+    def predict_chunks(self, embeddings: list[np.ndarray]) -> tuple[dict, str, float]:
+        """
+        Per-chunk prediction: XGBoost auf jedem Chunk, Mittelwert der Wahrscheinlichkeiten.
+
+        Jeder 30s-Chunk entspricht dem Trainings-Format (Deezer-Preview = 1 Clip).
+        Das Averaging passiert auf Wahrscheinlichkeits-Ebene, nicht auf Embedding-Ebene.
+
+        Args:
+            embeddings: Liste von 1024-dim Arrays (ein Array pro 30s-Chunk).
+
+        Returns:
+            Tuple: (gemittelte probabilities, label, confidence)
+        """
+        if len(embeddings) == 1:
+            return self.predict(embeddings[0])
+
+        all_probs = [self.predict(emb)[0] for emb in embeddings]
+        mean_probs = {
+            label: float(np.mean([p[label] for p in all_probs]))
+            for label in self.label_encoder.classes_
+        }
+
+        pred_label = max(mean_probs, key=mean_probs.__getitem__)
+        confidence = mean_probs[pred_label]
+
+        return mean_probs, pred_label, confidence

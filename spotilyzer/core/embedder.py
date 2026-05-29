@@ -200,17 +200,28 @@ class MERTEmbedder:
 
     def process_file(self, filepath: Path) -> np.ndarray:
         """
-        Komplette Pipeline: Audio-Datei → 1024-dim Embedding (Volltrack).
+        Audio-Datei → 1024-dim Embedding (mean-pool über alle Chunks).
+        Wird nur noch intern / für Tests genutzt.
+        Für Inferenz: process_file_chunks().
+        """
+        self._ensure_on_device()
+        waveform = self.load_audio(filepath)
+        chunks = self._chunk_waveform(waveform)
+        embeddings = [self.extract_embedding(chunk) for chunk in chunks]
+        return np.mean(embeddings, axis=0)
 
-        Der komplette Track wird in MERT_CHUNK_SEC-Segmente aufgeteilt.
-        Pro Segment wird ein Embedding extrahiert. Das finale Embedding
-        ist das arithmetische Mittel aller Chunk-Embeddings.
+    def process_file_chunks(self, filepath: Path) -> list[np.ndarray]:
+        """
+        Audio-Datei → Liste von 1024-dim Embeddings (ein Embedding pro 30s-Chunk).
+
+        Kein mean-pooling: jeder Chunk wird einzeln ausgewertet.
+        Das entspricht dem Trainings-Format (Deezer 30s-Previews = 1 Chunk = 1 Embedding).
 
         Args:
             filepath: Pfad zur Audio-Datei.
 
         Returns:
-            1024-dimensionales numpy Array (gemittelt über alle Chunks).
+            Liste von 1024-dim numpy Arrays (mindestens 1 Element).
 
         Raises:
             RuntimeError: Bei Fehler in irgendeinem Schritt.
@@ -218,5 +229,4 @@ class MERTEmbedder:
         self._ensure_on_device()
         waveform = self.load_audio(filepath)
         chunks = self._chunk_waveform(waveform)
-        embeddings = [self.extract_embedding(chunk) for chunk in chunks]
-        return np.mean(embeddings, axis=0)
+        return [self.extract_embedding(chunk) for chunk in chunks]
