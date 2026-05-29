@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "spotilyzer"
 version = "2.0.0"
-description = "Hit/Mid/Flop Audio Analyzer — bewertet die Mainstream-Kompatibilität von Audio-Tracks"
+description = "Hit/Mid/Flop audio analyzer — evaluates mainstream compatibility of audio tracks"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
     {name = "Andreas Vogelsang"},
 ]
