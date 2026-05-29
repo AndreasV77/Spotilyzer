@@ -4,14 +4,17 @@ This is the canonical reference locale.  Every key used in the codebase
 should have an entry here.  Keys follow the pattern ``<module>.<element>``
 (e.g. ``toolbar.open``, ``dialog.clear.title``).
 
+Pluralization: use separate ``.singular`` / ``.plural`` keys rather than
+inline suffix placeholders so that non-English locales can provide their
+own forms without needing to match English morphology.
+
 Note: the GUI currently uses hardcoded strings.  This file is the first
 step toward full localization — wiring the GUI to call ``t()`` is a
 separate refactoring task.
 """
 
 STRINGS: dict[str, str] = {
-    # ── App / Window ──────────────────────────────────────────────
-    "app.title":                       "Spotilyzer v{version}",
+    # ── App / Window ─────────────────────────────────────────────\n    "app.title":                       "Spotilyzer v{version}",
     "app.about.title":                 "About Spotilyzer",
     "app.about.body":                  (
         "Spotilyzer v{version}\n\n"
@@ -23,8 +26,7 @@ STRINGS: dict[str, str] = {
         "Theme: Buena Vista-inspired"
     ),
 
-    # ── Toolbar ───────────────────────────────────────────────────
-    "toolbar.name":                    "Tools",
+    # ── Toolbar ───────────────────────────────────────────────\n    "toolbar.name":                    "Tools",
     "toolbar.open":                    "Open",
     "toolbar.open.tooltip":            "Select audio files to analyze",
     "toolbar.export":                  "Export",
@@ -38,19 +40,16 @@ STRINGS: dict[str, str] = {
     "toolbar.mode.pro":                "Pro",
     "toolbar.mode.pro.tooltip":        "Pro view — all fields + dock panels",
 
-    # ── Menu bar ──────────────────────────────────────────────────
-    "menu.file":                       "&File",
+    # ── Menu bar ──────────────────────────────────────────────\n    "menu.file":                       "&File",
     "menu.file.quit":                  "&Quit",
     "menu.view":                       "&View",
     "menu.help":                       "&Help",
     "menu.help.about":                 "About Spotilyzer",
 
-    # ── Status bar ────────────────────────────────────────────────
-    "statusbar.device":                "Device: {device} | Model: {model}",
+    # ── Status bar ────────────────────────────────────────────\n    "statusbar.device":                "Device: {device} | Model: {model}",
     "statusbar.device.loading":        "Device: ...",
 
-    # ── Pipeline status messages ──────────────────────────────────
-    "status.init":                     "Initializing ML pipeline...",
+    # ── Pipeline status messages ────────────────────────────\n    "status.init":                     "Initializing ML pipeline...",
     "status.ready":                    "✅ Ready! Device: {device} | Drop audio files here or click to select",
     "status.model_missing":            (
         "❌ Model not found! "
@@ -65,33 +64,27 @@ STRINGS: dict[str, str] = {
     "status.export_saved":             "✅ Export saved: {path}",
     "status.cleared":                  "Results cleared",
 
-    # ── Pipeline error dialog ─────────────────────────────────────
-    "dialog.pipeline_error.title":     "Pipeline Error",
+    # ── Pipeline error dialog ────────────────────────────────\n    "dialog.pipeline_error.title":     "Pipeline Error",
     "dialog.pipeline_error.body":      "The ML pipeline could not be initialized:\n\n{error}",
 
-    # ── Not-ready / busy dialogs ──────────────────────────────────
-    "dialog.not_ready.title":          "Not Ready",
+    # ── Not-ready / busy dialogs ────────────────────────────\n    "dialog.not_ready.title":          "Not Ready",
     "dialog.not_ready.body":           "The ML pipeline is still initializing.\nPlease wait a moment.",
     "dialog.busy.title":               "Analysis Running",
     "dialog.busy.body":                "An analysis is already in progress.\nPlease wait for it to complete.",
 
-    # ── File dialog ───────────────────────────────────────────────
-    "dialog.open_files.title":         "Select Audio Files",
+    # ── File dialog ────────────────────────────────────────────\n    "dialog.open_files.title":         "Select Audio Files",
     "dialog.open_files.filter":        "Audio Files ({ext});;All Files (*.*)",
 
-    # ── Export dialog ─────────────────────────────────────────────
-    "dialog.export.title":             "Export Results",
+    # ── Export dialog ───────────────────────────────────────────\n    "dialog.export.title":             "Export Results",
     "dialog.export.no_results.title":  "Nothing to Export",
     "dialog.export.no_results.body":   "No results to export.",
     "dialog.export_error.title":       "Export Error",
     "dialog.export_error.body":        "Error while exporting:\n{error}",
 
-    # ── Clear dialog ──────────────────────────────────────────────
-    "dialog.clear.title":              "Delete Results?",
+    # ── Clear dialog ────────────────────────────────────────────\n    "dialog.clear.title":              "Delete Results?",
     "dialog.clear.body":               "{count} results will be deleted.\nContinue?",
 
-    # ── Central widget ────────────────────────────────────────────
-    "central.title":                   "SPOTILYZER",
+    # ── Central widget ──────────────────────────────────────────\n    "central.title":                   "SPOTILYZER",
     "central.subtitle":                "Hit/Mid/Flop Analyzer",
     "central.status.init":             "Initializing...",
     "central.stats.empty":             "No results",
@@ -103,25 +96,24 @@ STRINGS: dict[str, str] = {
     "central.dropzone.more":           "+ Drop more files or click",
     "central.dropzone.empty":          "Drop audio files here\nor click to select",
 
-    # ── Drop zone ─────────────────────────────────────────────────
-    "dropzone.instructions":           "Drop audio files here\nor click to select",
+    # ── Drop zone ──────────────────────────────────────────────\n    "dropzone.instructions":           "Drop audio files here\nor click to select",
     "dropzone.loading":                "Loading model...",
 
-    # ── File panel ────────────────────────────────────────────────
-    "panel.files.title":               "Files",
+    # ── File panel ──────────────────────────────────────────────\n    "panel.files.title":               "Files",
     "panel.files.nav.up":              "Go up one folder",
     "panel.files.nav.home":            "Home directory",
     "panel.files.path.placeholder":    "Folder path...",
     "panel.files.analyze_btn":         "▶  Analyze selection",
-    "panel.files.analyze_btn.n":       "▶  Analyze {count} file{plural}",
+    "panel.files.analyze_btn.n.singular": "▶  Analyze {count} file",
+    "panel.files.analyze_btn.n.plural":   "▶  Analyze {count} files",
     "panel.files.status":              "{count} audio files in this folder",
     "panel.files.status.ready":        "Ready",
 
-    # ── Highscore panel ───────────────────────────────────────────
-    "panel.highscore.title":           "Highscore",
+    # ── Highscore panel ───────────────────────────────────────────\n    "panel.highscore.title":           "Highscore",
     "panel.highscore.ranking":         "Ranking",
     "panel.highscore.no_results":      "No results",
-    "panel.highscore.count":           "{count} track{plural}",
+    "panel.highscore.count.singular":  "{count} track",
+    "panel.highscore.count.plural":    "{count} tracks",
     "panel.highscore.col.rank":        "#",
     "panel.highscore.col.file":        "File",
     "panel.highscore.col.rating":      "Rating",
@@ -130,10 +122,10 @@ STRINGS: dict[str, str] = {
     "panel.highscore.col.flop_pct":    "Flop%",
     "panel.highscore.col.confidence":  "Confidence",
 
-    # ── History panel ─────────────────────────────────────────────
-    "panel.history.title":             "History",
+    # ── History panel ─────────────────────────────────────────────\n    "panel.history.title":             "History",
     "panel.history.no_results":        "0 entries",
-    "panel.history.count":             "{count} entr{plural_y_ies}",
+    "panel.history.count.singular":    "{count} entry",
+    "panel.history.count.plural":      "{count} entries",
     "panel.history.export_label":      "Export:",
     "panel.history.export.json":       "JSON",
     "panel.history.export.json.tip":   "Export as JSON (re-importable)",
@@ -153,8 +145,7 @@ STRINGS: dict[str, str] = {
     "panel.history.export_err.title":  "Export Error",
     "panel.history.export_err.body":   "Error while exporting:\n{error}",
 
-    # ── Tech panel ────────────────────────────────────────────────
-    "panel.tech.title":                "Technical",
+    # ── Tech panel ───────────────────────────────────────────────\n    "panel.tech.title":                "Technical",
     "panel.tech.no_track":             "No track selected",
     "panel.tech.field.duration":       "Duration",
     "panel.tech.field.format":         "Format",
@@ -175,8 +166,7 @@ STRINGS: dict[str, str] = {
     "panel.tech.player.time":          "0:00 / 0:00",
     "panel.tech.rating_line":          "{rating} | Hit: {hit_pct} | Confidence: {conf_pct}",
 
-    # ── Settings panel ────────────────────────────────────────────
-    "panel.settings.title":            "Settings",
+    # ── Settings panel ───────────────────────────────────────────\n    "panel.settings.title":            "Settings",
     "panel.settings.group.view":       "View",
     "panel.settings.view.mode_label":  "Mode:",
     "panel.settings.view.mode_hint":   "Simple = rating only | Balanced = + audio info | Pro = everything",

@@ -16,6 +16,7 @@ where each file defines a ``STRINGS: dict[str, str]`` mapping.
 """
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 _strings: dict[str, str] = {}
@@ -28,9 +29,15 @@ def load(locale: str = "EN") -> None:
     _locale = locale
     try:
         strings_path = Path(__file__).parent / locale / "strings.py"
-        ns: dict = {}
-        exec(strings_path.read_text(encoding="utf-8"), ns)
-        _strings = ns.get("STRINGS", {})
+        spec = importlib.util.spec_from_file_location(
+            f"spotilyzer.locale.{locale}.strings", strings_path
+        )
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)  # type: ignore[union-attr]
+            _strings = getattr(module, "STRINGS", {})
+        else:
+            _strings = {}
     except Exception:
         _strings = {}
 

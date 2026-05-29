@@ -72,7 +72,7 @@ Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/large
 ## Setup
 
 - **Python**: 3.12 (dev env); minimum 3.10 per `pyproject.toml`; venv at `.venv-spotilyzer/` (5.7 GB incl. CUDA libs)
-- **Activate**: `.\venv-spotilyzer\Scripts\Activate.ps1` (PowerShell)
+- **Activate**: `.\.venv-spotilyzer\Scripts\Activate.ps1` (PowerShell)
 - **Install core**: `pip install -e .`
 - **Install with dev deps**: `pip install -e ".[dev]"` (adds pyinstaller, pytest)
 - **Model required**: `models/spotilyzer_model.joblib` must exist before running
