@@ -1,91 +1,91 @@
 # Spotilyzer v2.0 — Hit/Mid/Flop Analyzer
 
-ML-basiertes Audio-Analyse-Tool. Klassifiziert Tracks als **Hit / Mid / Flop** anhand von Mainstream-Kompatibilität.
+ML-based audio analysis tool. Classifies tracks as **Hit / Mid / Flop** based on mainstream compatibility.
 
-**Pipeline:** Audiodatei → MERT-v1-330M Embeddings (1024-dim) → XGBoost 3-Klassen-Klassifikator → GUI oder CLI
+**Pipeline:** Audio file → MERT-v1-330M embeddings (1024-dim) → XGBoost 3-class classifier → GUI or CLI
 
 ---
 
-## Schnellstart
+## Quick Start
 
 ```bash
-# Venv erstellen & aktivieren (Python 3.12 empfohlen, min. 3.10)
+# Create & activate venv (Python 3.12 recommended, min. 3.10)
 python -m venv .venv312
 .\.venv312\Scripts\Activate.ps1   # PowerShell
 
-# Paket installieren
+# Install package
 pip install -e .
 
-# GUI starten
+# Launch GUI
 spotilyzer
 
-# CLI — einzelnen Track analysieren
-spotilyzer-cli "mein_track.mp3"
+# CLI — analyze a single track
+spotilyzer-cli "my_track.mp3"
 ```
 
-> **Erster Start:** MERT-v1-95M (~380 MB) wird automatisch von HuggingFace heruntergeladen
-> und in `~/.cache/huggingface/hub/` gecacht. Internetverbindung erforderlich.
+> **First launch:** MERT-v1-95M (~380 MB) is automatically downloaded from HuggingFace
+> and cached at `~/.cache/huggingface/hub/`. Internet connection required.
 
-> **Modell erforderlich:** `models/spotilyzer_model.joblib` muss vorhanden sein.
-> Entweder selbst trainieren (siehe [Training](#training)) oder eine fertige Version herunterladen.
+> **Model required:** `models/spotilyzer_model.joblib` must be present.
+> Either train it yourself (see [Training](#training)) or download a pre-built version.
 
 ---
 
 ## Features
 
-- **GUI** (PySide6): Drag & Drop, drei View-Modi (Simple / Balanced / Pro), Dark/Light-Theme
-- **CLI**: JSON, Minimal oder Default-Ausgabe; `--device cuda` für GPU
-- **13 Analyse-Felder** pro Track: Rating, Confidence, Hit/Mid/Flop-Wahrscheinlichkeiten + BPM, LUFS, Key, Format, Sample Rate, Bitrate, Kanäle, Dauer, Dateigröße
-- **Unterstützte Formate:** `.mp3` `.flac` `.wav` `.ogg` `.m4a` `.aac` `.wma`
+- **GUI** (PySide6): Drag & Drop, three view modes (Simple / Balanced / Pro), Dark/Light theme
+- **CLI**: JSON, Minimal or Default output; `--device cuda` for GPU
+- **13 analysis fields** per track: Rating, Confidence, Hit/Mid/Flop probabilities + BPM, LUFS, Key, Format, Sample Rate, Bitrate, Channels, Duration, File Size
+- **Supported formats:** `.mp3` `.flac` `.wav` `.ogg` `.m4a` `.aac` `.wma`
 
 ---
 
-## Modell-Performance (aktuell)
+## Model Performance (current)
 
-Trainiert auf **~8.960 validated Samples** (Deezer 30s-Previews + Spotify Charts + Kworb historische Charts, 6 Märkte), 1024-dim MERT-v1-330M Embeddings. Holdout-Set: 1173 Samples (20%).
+Trained on **~8,960 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 6 markets), 1024-dim MERT-v1-330M embeddings. Holdout set: 1173 samples (20%).
 
-| Metrik            | Wert           |
+| Metric            | Value          |
 |-------------------|----------------|
-| Balanced Accuracy | **63,0 %**     |
-| Hit Recall        | **72,8 %**     |
-| Flop Recall       | **68,7 %** ✓  |
+| Balanced Accuracy | **63.0 %**     |
+| Hit Recall        | **72.8 %**     |
+| Flop Recall       | **68.7 %** ✓  |
 
-**Interpretation:** ≥ 85 % Confidence = echtes Potential. < 60 % = unsicher, als Mid behandeln.
-Inferenz: ~0,8 s/Track auf GTX 1660 Ti. Hit Recall verbessert sich kontinuierlich — aktuell 72,8 % (Ziel ≥ 80 %).
+**Interpretation:** ≥ 85 % confidence = genuine potential. < 60 % = uncertain, treat as Mid.
+Inference: ~0.8 s/track on GTX 1660 Ti. Hit Recall improves continuously — currently 72.8 % (target ≥ 80 %).
 
 ---
 
-## CLI-Referenz
+## CLI Reference
 
 ```bash
-# Standard-Ausgabe (Tabelle)
+# Default output (table)
 spotilyzer-cli "track.mp3"
 
-# JSON (maschinenlesbar)
+# JSON (machine-readable)
 spotilyzer-cli "track.mp3" --style json
 
-# Minimal (nur Rating + Score)
+# Minimal (rating + score only)
 spotilyzer-cli "track.mp3" --style minimal
 
-# GPU verwenden
+# Use GPU
 spotilyzer-cli "track.mp3" --device cuda
 
-# Ohne Audio-Infos (schneller)
+# Without audio info (faster)
 spotilyzer-cli "track.mp3" --no-audio-info
 ```
 
 ---
 
-## Setup (Entwicklung)
+## Setup (Development)
 
 ```bash
-# Nur Core
+# Core only
 pip install -e .
 
-# Mit Training-Deps (XGBoost, scikit-learn, transformers, torchaudio …)
+# With training deps (XGBoost, scikit-learn, transformers, torchaudio …)
 pip install -e ".[training]"
 
-# Mit Dev-Deps (pyinstaller, pytest)
+# With dev deps (pyinstaller, pytest)
 pip install -e ".[dev]"
 ```
 
@@ -93,97 +93,99 @@ pip install -e ".[dev]"
 
 ## Training
 
-Das Training läuft im separaten Repository [SpotilyzerTraining](https://github.com/AndreasV77/SpotilyzerTraining).
+Training runs in the separate repository [SpotilyzerTraining](https://github.com/AndreasV77/SpotilyzerTraining).
 
-**Datenquellen:**
-- **Deezer API** — 30s-Previews + Popularity-Rank (kostenlos, keine Auth)
-- **Last.fm API** — Playcount + Listeners zur Label-Validierung
-- **Spotify Charts CSV** — Top 200 Charts (manuell, 7 Märkte)
-- **Kworb.net** — Historische Chart-Daten (peak_position, weeks_in_chart)
-- **MusicBrainz API** — ISRC-Lookup für Deduplizierung
+**Data sources:**
+- **Deezer API** — 30s previews + popularity rank (free, no auth)
+- **Last.fm API** — playcount + listeners for label validation
+- **Spotify Charts CSV** — Top 200 Charts (manual, 7 markets)
+- **Kworb.net** — historical chart data (peak_position, weeks_in_chart)
+- **MusicBrainz API** — ISRC lookup for deduplication
 
-**Aktueller Datensatz:** 5.660 validated Samples, 1.216 Hits, 23 Genre-Cluster + Charts
+**Current dataset:** 5,660 validated samples, 1,216 hits, 23 genre clusters + charts
 
 **Deployment:**
 ```powershell
-# Nach Training in SpotilyzerTraining:
+# After training in SpotilyzerTraining:
 Copy-Item outputs/models/spotilyzer_model_MERTv1330M_*_validated_*.joblib ..\Spotilyzer\models\
 Copy-Item outputs/reports/training_report_MERTv1330M_*_validated_*.json   ..\Spotilyzer\models\
 ```
 
 ---
 
-## Paketstruktur
+## Package Structure
 
 ```
-spotilyzer/          # Installierbares Paket
+spotilyzer/          # Installable package
   core/
-    pipeline.py      # AnalysisPipeline — orchestriert Embedder + Predictor + AudioInfo
+    pipeline.py      # AnalysisPipeline — orchestrates Embedder + Predictor + AudioInfo
     embedder.py      # MERTEmbedder (Singleton) — MERT-v1-95M, 768-dim
-    predictor.py     # SpotilyzerPredictor — XGBoost-Wrapper
+    predictor.py     # SpotilyzerPredictor — XGBoost wrapper
     audio_info.py    # BPM, LUFS, Key, Format, Waveform
   cli/
-    analyze.py       # CLI-Einstiegspunkt
+    analyze.py       # CLI entry point
   gui/
     app.py           # SpotilyzerApp (QMainWindow)
-    central.py       # DropZone + Ergebnisliste + Stats
-    worker.py        # QThread-Worker für ML-Operationen
-    theme.py         # ThemeManager (Dark/Light + Accent-Farbe)
-    panels/          # Dock-Panels: file, highscore, history, tech, settings
+    central.py       # DropZone + result list + stats
+    worker.py        # QThread worker for ML operations
+    theme.py         # ThemeManager (Dark/Light + accent color)
+    panels/          # Dock panels: file, highscore, history, tech, settings
     widgets/         # DropZone, ResultCard, ConfidenceBar, Waveform
   data/
     models.py        # AnalysisResult, AudioInfo, Rating/AppMode/SortMode
-    persistence.py   # JSON/CSV/MD/TXT-Export, Auto-Save
-training/            # Nicht im EXE gebündelt
+    persistence.py   # JSON/CSV/MD/TXT export, auto-save
+  locale/
+    EN/
+      strings.py     # All English UI strings (localization foundation)
+training/            # Not bundled in EXE
   scout_genre_clusters_deezer.py
   download_previews.py
   extract_embeddings.py
   train_model.py
-  config.py          # Pfad-Konfiguration (liest paths.env)
-  paths.env.example  # Vorlage für externe Datenpfade
+  config.py          # Path configuration (reads paths.env)
+  paths.env.example  # Template for external data paths
 models/              # spotilyzer_model.joblib + training_report.json
-resources/           # GUI-Assets
-legacy/              # Archivierte Spotify-API-Skripte (nur Referenz)
+resources/           # GUI assets
+legacy/              # Archived Spotify API scripts (reference only)
 ```
 
 ---
 
-## Windows EXE bauen
+## Building the Windows EXE
 
 ```bash
 pip install -e ".[dev]"
 pyinstaller spotilyzer.spec
 
-# CUDA-Libs entfernen (~1,5 GB Einsparung)
+# Remove CUDA libs (~1.5 GB savings)
 python strip_cuda.py
 ```
 
-MERT (~380 MB) wird **nicht** gebündelt — wird beim ersten Start heruntergeladen.
-Gesamtgröße nach Strip: ~3 GB.
+MERT (~380 MB) is **not** bundled — downloaded on first launch.
+Total size after strip: ~3 GB.
 
 ---
 
-## Bekannte Einschränkungen
+## Known Limitations
 
-- **App-Icon:** `resources/spotilyzer.ico` fehlt noch — Fenster zeigt Standard-Qt-Icon
-- **Drag & Drop + Admin-Shell (Windows):** D&D aus Explorer funktioniert nicht wenn die App
-  in einer elevated Shell läuft (Windows UIPI). Lösung: App ohne Admin starten oder
-  Datei-Dialog verwenden
-- **Flop-Recall schwach (26,8 %):** Mehr Flop-Trainingssamples benötigt
+- **App icon:** `resources/spotilyzer.ico` missing — window shows default Qt icon
+- **Drag & Drop + Admin shell (Windows):** D&D from Explorer doesn't work when the app
+  runs in an elevated shell (Windows UIPI). Fix: run app without admin or use the file dialog
+- **Flop Recall weak (26.8 %):** More Flop training samples needed
 
 ---
 
 ## Roadmap
 
-**Kurzfristig**
-- App-Icon erstellen (`resources/spotilyzer.ico`)
-- Flop-Recall verbessern (mehr Flop-Samples)
-- Modell-Download im GUI (statt lokales Training)
+**Short-term**
+- Create app icon (`resources/spotilyzer.ico`)
+- Improve Flop Recall (more Flop samples)
+- In-app model download (instead of local training)
 
-**Mittelfristig**
-- "Klingt wie …" — Ähnlichkeitssuche im Embedding-Raum
-- Genre-Klassifikation (zweites Modell)
-- Genre-Cluster-Editor im GUI (PRO-Modus)
+**Medium-term**
+- "Sounds like …" — similarity search in embedding space
+- Genre classification (second model)
+- Genre cluster editor in GUI (PRO mode)
 
-**Langfristig**
-- Genre-spezifische Modelle (eines pro Cluster)
+**Long-term**
+- Genre-specific models (one per cluster)
