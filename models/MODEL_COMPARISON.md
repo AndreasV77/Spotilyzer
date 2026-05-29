@@ -3,12 +3,30 @@
 > **Lesehinweis zu den Metriken**
 > Alle Metriken auf **echtem Holdout-Set (20 %)** — kein Data-Leakage.
 > Quelle: `evaluation_report_*.json` im selben Verzeichnis.
+>
+> **Inference-Architektur (ab Session 10, 2026-05-29):**
+> Full Track → N Chunks à 30s → MERT(chunk_i) → XGBoost(chunk_i) → mean(prob_1..prob_N)
+> Jeder Chunk wird einzeln bewertet — identisches Format wie Training (Deezer 30s-Previews).
+> *(Noch zu implementieren in `predictor.py` / `embedder.py`)*
 
 ---
 
-## Aktives Modell (Stand: 2026-03-19)
+## Aktive Modelle (Stand: 2026-05-29)
 
-**`spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260319.joblib`**
+### Default: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260331.joblib`
+
+| Metrik | Wert | Ziel | Status |
+|---|---|---|---|
+| **Hit Recall** | **86,9 %** | ≥ 80 % | ✅ erreicht |
+| **Flop Recall** | **67,5 %** | ≥ 50 % | ✅ erreicht |
+| **Balanced Accuracy** | **63,0 %** | ≥ 65 % | ⚠️ −2,0 pp |
+| Mid Recall | 34,7 % | — | (bekannte Schwäche) |
+
+- Hyperparameter: depth=5, colsample=0.8
+- Trainingsdaten: 22.722 Samples (validated only)
+- Holdout: 4.545 Samples — 2.999 Hits / 1.131 Mids / 415 Flops
+
+### Alternative: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260319.joblib`
 
 | Metrik | Wert | Ziel | Status |
 |---|---|---|---|
@@ -17,10 +35,11 @@
 | **Balanced Accuracy** | **64,2 %** | ≥ 65 % | ⚠️ −0,8 pp |
 | Mid Recall | 36,6 % | — | (bekannte Schwäche) |
 
-- Embedder: MERT-v1-330M (1024-dim)
+- Hyperparameter: depth=4, colsample=0.6 — BA-Optimum aus Session 8
 - Trainingsdaten: 22.722 Samples (validated only)
 - Holdout: 4.545 Samples — 2.999 Hits / 1.131 Mids / 415 Flops
-- CV Balanced Accuracy: 63,4 % ± 0,9 % (konsistent, kein Overfitting)
+
+**Wahl:** Default = höherer Hit Recall. Alternative = höhere BA + besserer Flop Recall.
 
 ---
 
@@ -35,7 +54,8 @@
 | `MERTv195M_main+spotify_charts_validated_20260319` | 4 | 5.660 val. | 1.132 | 57,4 % | 47,7 % | 68,7 % |
 | `MERTv1330M_main+spotify_charts_validated_20260319` | 4 | 5.660 val. | 1.132 | 60,9 % | 55,1 % | 69,2 % |
 | `MERTv1330M_main+spotify_charts+kworb_validated_20260319` | 5 | 8.960 val. | 1.173 | 63,0 % | 72,8 % | 68,7 % |
-| **`MERTv1330M_main+spotify_charts+kworb_validated_20260319`** | **6** | **22.722 val.** | **4.545** | **64,2 %** | **82,5 %** | **73,5 %** |
+| `MERTv1330M_main+spotify_charts+kworb_validated_20260319` | 6 | 22.722 val. | 4.545 | 64,2 % | 82,5 % | 73,5 % |
+| **`MERTv1330M_main+spotify_charts+kworb_validated_20260331`** | **8** | **22.722 val.** | **4.545** | 63,0 % | **86,9 %** | 67,5 % |
 
 *\* Session-1-Modell hatte Label-Swap-Bug (hit/mid vertauscht im Report) — Wert nicht direkt vergleichbar.*
 
@@ -49,10 +69,8 @@ Session 3 (5.262 Samples,    637 Hits):  37,5 %
 Session 4 (5.660 Samples,  1.216 Hits):  55,1 %  (+17,6 pp)
 Session 5 (8.960 Samples,  3.713 Hits):  72,8 %  (+17,7 pp)
 Session 6 (22.722 Samples, 14.991 Hits): 82,5 %  (+9,7 pp)  ✅ Ziel erreicht
+Session 8 (depth=5):                     86,9 %  (+4,4 pp)  (Default-Modell)
 ```
-
-**Empirische Regel:** Je ~2.500 neue validierte Hit-Samples → ca. +17–18 pp Hit Recall
-(gültig für Session 3–5; Session 6 bestätigt den Trend mit größerem Sprung)
 
 ---
 
@@ -69,50 +87,22 @@ Kworb-Märkte: us, gb, de, jp, br, mx (Session 5) + fr, au, ca (0,85) + it, se, 
 
 ---
 
-## Klassenverteilung Holdout (Session 6)
+## Klassenverteilung Holdout
 
-| Klasse | Samples | Anteil | Recall | Precision |
-|--------|---------|--------|--------|-----------|
-| Hit | 2.999 | 66 % | 82,5 % | 81,1 % |
-| Mid | 1.131 | 25 % | 36,6 % | 44,1 % |
-| Flop | 415 | 9 % | 73,5 % | 54,8 % |
+| Klasse | Samples | Anteil | Recall (Default) | Recall (Alt.) |
+|--------|---------|--------|-----------------|---------------|
+| Hit | 2.999 | 66 % | 86,9 % | 82,5 % |
+| Mid | 1.131 | 25 % | 34,7 % | 36,6 % |
+| Flop | 415 | 9 % | 67,5 % | 73,5 % |
 
-> **Hinweis:** Der hohe Hit-Anteil im Holdout (66 %) spiegelt den kworb-Datensatz wider,
-> der primär Top-Streaming-Tracks enthält. In der realen Nutzung (Analyse unbekannter Tracks)
-> wird der Hit-Anteil deutlich niedriger sein.
-
----
-
-## Bekannte Schwächen
-
-| Problem | Ursache | Auswirkung |
-|---------|---------|------------|
-| Mid Recall nur 36,6 % | Mid-Klasse zwischen Hit/Flop zerrieben | 539 Mids werden als Hit klassifiziert |
-| BA knapp unter 65 % (64,2 %) | Mid-Recall zieht BA runter | Primärziel noch nicht ganz erreicht |
-| Klassenverteilung schief (66 % Hits) | kworb liefert fast nur Hits | Modell leicht hit-gebias'd |
+> **Hinweis:** Der hohe Hit-Anteil im Holdout (66 %) spiegelt den kworb-Datensatz wider.
+> In der realen Nutzung wird der Hit-Anteil deutlich niedriger sein.
 
 ---
 
-## Stärken & Schwächen im Vergleich
+## Offene Aufgaben
 
-| | **MERTv195M (S1)** | **MERTv1330M (S3)** | **MERTv1330M (S6, aktiv)** |
-|---|---|---|---|
-| Hit-Erkennung | ✅ 93,6 %* | ⚠️ 37,5 % | ✅ **82,5 %** |
-| Flop-Erkennung | ❌ 26,8 % | ✅ 71,1 % | ✅ **73,5 %** |
-| Mid-Erkennung | ✅ 67,2 % | ✅ ~46 % | ⚠️ 36,6 % |
-| Balanced Accuracy | 62,5 % | 57,5 % | **64,2 %** |
-| Label-Swap-Bug | ⚠️ | ✅ behoben | ✅ |
-| Produktionsstatus | ❌ | ❌ | ✅ **deployed** |
-
-*\* Label-Swap-Bug — Wert nicht direkt vergleichbar*
-
----
-
-## Nächste Schritte (nach Session 6)
-
-1. **BA ≥ 65 %** — fehlen noch 0,8 pp; Optionen:
-   - Hyperparameter-Tuning (Mid-Klasse stärken)
-   - Mid-Samples ausbalancieren (Oversampling / Untergewichtung der Hit-Flut)
-   - `compute_labels.py` Bug 3 fixen (Dissent → "contested" statt "mid")
-2. **Neue Chart-Quellen** — ODJC (DJ Charts CSV), aCharts (nach Bedarf)
-3. **`enrich_isrc.py`** — ISRC für kworb-Tracks via MusicBrainz nachfüllen
+1. **Inference-Architektur implementieren** — `predictor.py` / `embedder.py` in Spotilyzer:
+   per-chunk XGBoost + mean(probabilities) statt mean-pool(embeddings) → XGBoost
+2. **CLAP als zweiter Score** — optional in GUI-Einstellungen (Mood/Genre-Dimension)
+3. **`compute_labels.py` Bug 3** — Dissent → "contested" statt "mid" (geringe Priorität)
