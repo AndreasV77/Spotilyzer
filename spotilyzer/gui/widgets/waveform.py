@@ -95,8 +95,8 @@ class WaveformWidget(QWidget):
         data = self._waveform_data
         n_points = data.shape[1]
 
-        # Auf Widget-Breite skalieren
-        x_scale = w / n_points if n_points > 0 else 1
+        # Bar-Breite: ≥1px, breiter wenn weniger Datenpunkte als Pixel vorhanden
+        bar_width = max(1, w // n_points) if n_points < w else 1
 
         # Gradient für die Waveform
         gradient = QLinearGradient(0, 0, 0, h)
@@ -107,11 +107,9 @@ class WaveformWidget(QWidget):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(gradient))
 
-        # Zeichne Min/Max-Balken für jede Spalte
-        for i in range(min(n_points, w)):
-            idx = int(i / x_scale) if x_scale > 0 else i
-            if idx >= n_points:
-                idx = n_points - 1
+        # Zeichne einen Balken pro Pixel: idx mappt Pixel → Datenpunkt
+        for x in range(w):
+            idx = min(int(x * n_points / w), n_points - 1)
 
             min_val = float(data[0, idx])
             max_val = float(data[1, idx])
@@ -120,10 +118,7 @@ class WaveformWidget(QWidget):
             y_min = center_y - max_val * center_y * 0.9
             y_max = center_y - min_val * center_y * 0.9
 
-            bar_height = max(1, y_max - y_min)
-            x = int(i * x_scale) if x_scale <= 1 else i
-
-            painter.drawRect(x, int(y_min), max(1, int(x_scale)), int(bar_height))
+            painter.drawRect(x, int(y_min), bar_width, max(1, int(y_max - y_min)))
 
         # Playback-Position (vertikale Linie)
         if self._playback_position > 0:

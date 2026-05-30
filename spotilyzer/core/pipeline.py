@@ -65,23 +65,49 @@ class AnalysisPipeline:
 
         self._notify("Pipeline bereit!")
 
+    def _find_report_path(self) -> Path:
+        """Finds training_report_*.json next to the model file.
+
+        Strategy: date-tag match first (last _-segment of model stem, e.g.
+        '20260529'), then newest glob, then bare-name fallback.
+        The date-tag approach handles the _validated suffix asymmetry between
+        model and report filenames.
+        """
+        parent = self.model_path.parent
+        date_tag = self.model_path.stem.rsplit("_", 1)[-1]
+        if date_tag.isdigit() and len(date_tag) == 8:
+            matches = list(parent.glob(f"training_report_*{date_tag}.json"))
+            if matches:
+                return matches[0]
+        candidates = sorted(
+            parent.glob("training_report_*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if candidates:
+            return candidates[0]
+        return parent / "training_report.json"
+
     def _build_model_info(self) -> ModelInfo:
         """Erstellt ModelInfo aus den aktuellen Pipeline-Parametern."""
         training_date = None
         dataset_info = None
 
         # Training-Report lesen (falls vorhanden)
-        report_path = self.model_path.parent / "training_report.json"
+        report_path = self._find_report_path()
         if report_path.exists():
             try:
                 import json
                 with open(report_path, "r", encoding="utf-8") as f:
                     report = json.load(f)
-                training_date = report.get("timestamp", report.get("date"))
+                training_date = report.get("created") or report.get("timestamp") or report.get("date")
                 dataset_info = report.get("dataset_info")
                 if not dataset_info:
-                    # Aus Trainings-Metriken zusammenbauen
-                    n_samples = report.get("total_samples") or report.get("n_samples")
+                    n_samples = (
+                        (report.get("dataset") or {}).get("n_samples")
+                        or report.get("total_samples")
+                        or report.get("n_samples")
+                    )
                     if n_samples:
                         dataset_info = f"{n_samples} Samples"
             except Exception:
@@ -180,16 +206,19 @@ class AnalysisPipeline:
             clap_result = None
             if include_clap:
                 notify(f"CLAP Genre/Mood: {filepath.name}...")
-                if self.vram_mode == "sequential":
-                    # MERT auf CPU → CLAP auf GPU → MERT wird beim nächsten
-                    # process_file()-Aufruf via _ensure_on_device() automatisch zurückgeholt
-                    self.embedder.offload_to_cpu()
-                clap = self._get_clap(notify)
-                if self.vram_mode == "sequential":
-                    clap.restore_to_device()
-                clap_result = clap.analyze(filepath, tag_sets=clap_tag_sets)
-                if self.vram_mode == "sequential":
-                    clap.offload_to_cpu()
+                try:
+                    if self.vram_mode == "sequential":
+                        # MERT auf CPU → CLAP auf GPU → MERT wird beim nächsten
+                        # process_file()-Aufruf via _ensure_on_device() automatisch zurückgeholt
+                        self.embedder.offload_to_cpu()
+                    clap = self._get_clap(notify)
+                    if self.vram_mode == "sequential":
+                        clap.restore_to_device()
+                    clap_result = clap.analyze(filepath, tag_sets=clap_tag_sets)
+                    if self.vram_mode == "sequential":
+                        clap.offload_to_cpu()
+                except Exception as clap_err:
+                    notify(f"CLAP fehlgeschlagen: {clap_err}")
 
             result = AnalysisResult(
                 file=filepath.name,

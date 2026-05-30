@@ -161,15 +161,19 @@ class CLAPAnalyzer:
         ):
             self.model.to(self.device)
 
+    # ClapFeatureExtractor validates sample rate and raises ValueError if it
+    # doesn't match — it does NOT resample silently.
+    CLAP_SAMPLE_RATE = 48_000
+
     def _load_audio(self, audio_path: Path) -> tuple[np.ndarray, int]:
         """
-        Lädt Audio-Datei vollständig als Mono-Numpy-Array.
+        Lädt Audio-Datei vollständig als Mono-Numpy-Array, resampled auf 48 kHz.
 
-        Kein Längen-Cap: der komplette Track wird zurückgegeben.
-        Chunking erfolgt in analyze() via _chunk_waveform().
+        ClapFeatureExtractor erwartet exakt 48 kHz und resampled nicht selbst —
+        es wirft einen ValueError bei abweichender Rate. Daher resampling hier.
 
         Returns:
-            (waveform_numpy, sample_rate) — CLAP-Processor übernimmt Resampling.
+            (waveform_numpy, 48000)
         """
         try:
             waveform, sr = load_audio_file(audio_path)
@@ -180,6 +184,11 @@ class CLAPAnalyzer:
 
         if waveform.shape[0] > 1:
             waveform = waveform.mean(dim=0, keepdim=True)
+
+        if sr != self.CLAP_SAMPLE_RATE:
+            resampler = torchaudio.transforms.Resample(orig_freq=sr, new_freq=self.CLAP_SAMPLE_RATE)
+            waveform = resampler(waveform)
+            sr = self.CLAP_SAMPLE_RATE
 
         return waveform.squeeze(0).numpy(), sr
 
