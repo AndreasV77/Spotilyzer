@@ -26,8 +26,9 @@ spotilyzer-cli "my_track.mp3"
 > **First launch:** MERT-v1-330M (~1.3 GB) is automatically downloaded from HuggingFace
 > and cached at `~/.cache/huggingface/hub/`. Internet connection required.
 
-> **Model required:** `models/spotilyzer_model.joblib` must be present.
-> Either train it yourself (see [Training](#training)) or download a pre-built version.
+> **Model required:** at least one `models/spotilyzer_model_*.joblib` must be present
+> (active model read from `models/active_model.txt`, or newest by mtime as fallback).
+> Either train it yourself (see [Training](#training)) or copy a pre-built `.joblib`.
 
 ---
 
@@ -42,11 +43,11 @@ spotilyzer-cli "my_track.mp3"
 
 ## Model Performance (current)
 
-Trained on **~22,722 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 12 markets), 1024-dim MERT-v1-330M embeddings. Holdout set: 4545 samples (20%).
+Trained on **~22,722 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 12 markets), 1024-dim MERT-v1-330M embeddings. Holdout set: 4545 samples (20%, each sample = one 30s clip). Production averages chunk probabilities over the full track; song-level evaluation pending.
 
 | Metric            | Value          | Target |
 |-------------------|----------------|--------|
-| Balanced Accuracy | **64.2 %**     | ≥ 65 % |
+| Balanced Accuracy | **63.0 %**     | ≥ 65 % |
 | Hit Recall        | **86.9 %** ✓   | ≥ 80 % |
 | Flop Recall       | **67.5 %** ✓   | ≥ 50 % |
 
@@ -137,13 +138,7 @@ spotilyzer/          # Installable package
   locale/
     EN/
       strings.py     # All English UI strings (localization foundation)
-training/            # Not bundled in EXE
-  scout_genre_clusters_deezer.py
-  download_previews.py
-  extract_embeddings.py
-  train_model.py
-  config.py          # Path configuration (reads paths.env)
-  paths.env.example  # Template for external data paths
+training/            # DEPRECATED — kept for reference only; active training scripts are in SpotilyzerTraining repo
 models/              # spotilyzer_model.joblib + training_report.json
 resources/           # GUI assets
 legacy/              # Archived Spotify API scripts (reference only)

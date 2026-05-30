@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation Workflow
+
+Doc consistency is maintained via a read-only **audit** → `ERRATA.md` → separate **fix pass** cycle, defined in `DOC_AUDIT.md`. Before fixing any defect referenced by ID (e.g. "SP-011"), read `DOC_AUDIT.md` for the rules and `ERRATA.md` for the defect. Log every fix as one line in `CHANGELOG.md`.
+
 ## Project Overview
 
 Spotilyzer (v2.0) is an ML-based audio analysis tool that classifies tracks as **Hit / Mid / Flop** based on mainstream compatibility. Pipeline: audio file → MERT-v1-330M embeddings (1024-dim) → XGBoost 3-class classifier → GUI or CLI output.
@@ -68,8 +72,10 @@ clarity take priority over tonal fidelity.
 ### Interface Between Projects
 
 **Input (Training → Spotilyzer):**
-- `models/spotilyzer_model.joblib` — trained XGBoost model
-- `models/training_report.json` — training metadata (optional)
+- `models/spotilyzer_model_*.joblib` — trained XGBoost model (full-named, e.g. `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260529.joblib`)
+- `models/training_report_*.json` — training metadata (full-named, e.g. `training_report_MERTv1330M_main+spotify_charts+kworb_validated_20260529.json`); optional but shown in GUI
+
+**⚠ Known code gap:** `pipeline.py` currently loads `model_path.parent / "training_report.json"` (bare name). Since no bare-name report exists, model metadata is silently empty in the GUI. Fix: update `pipeline.py` to glob for `training_report_*.json` adjacent to the active model file.
 
 **The main project has NO dependency on the training repo.** It only consumes the finished model.
 
@@ -91,7 +97,7 @@ clarity take priority over tonal fidelity.
 - **Activate**: `.\.venv-spotilyzer\Scripts\Activate.ps1` (PowerShell)
 - **Install core**: `pip install -e .`
 - **Install with dev deps**: `pip install -e ".[dev]"` (adds pyinstaller, pytest)
-- **Model required**: `models/spotilyzer_model.joblib` must exist before running
+- **Model required**: at least one `models/spotilyzer_model_*.joblib` must exist before running. The active model is selected via `models/active_model.txt` (filename pointer) or, if absent, the newest `*.joblib` by mtime. The bare `models/spotilyzer_model.joblib` is the legacy fallback only.
 - **MERT-v1-330M model** (~1.3 GB): auto-downloaded by HuggingFace `transformers` on first run to `~/.cache/huggingface/hub/`
 - **CLAP model** (~776 MB): auto-downloaded on first `--include-clap` run to `~/.cache/huggingface/hub/`
 
@@ -180,7 +186,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **CLAP tag sets**: `DEFAULT_TAG_SETS` in `clap_analyzer.py` defines genre and mood tag lists. Custom tag sets can be passed via `clap_tag_sets` parameter. Metal subgenres ("gothic metal", "doom metal", etc.) should be added for better accuracy on heavy music.
 
-**Model file format**: `models/spotilyzer_model.joblib` is a `dict` with keys `"model"` (XGBoost) and `"label_encoder"` (sklearn LabelEncoder). The optional `models/training_report.json` provides metadata shown in the GUI.
+**Model file format**: `models/spotilyzer_model_*.joblib` is a `dict` with keys `"model"` (XGBoost) and `"label_encoder"` (sklearn LabelEncoder). The optional `models/training_report_*.json` (same date suffix as the model) provides metadata shown in the GUI. See ⚠ note under Interface Between Projects above — bare-name lookup in `pipeline.py` is a known code gap.
 
 **Audio preprocessing**: mono conversion → resample to 24 kHz → split into 30s chunks (overlap-free, last chunk zero-padded, <5s tail discarded) → MERT embedding per chunk → XGBoost per chunk → mean(probabilities) → final rating. Each chunk is scored independently, matching the training format (Deezer 30s-previews = 1 chunk = 1 embedding).
 
@@ -194,7 +200,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **Auto-save**: results persist to `spotilyzer_results.json` in CWD after each batch. Loaded automatically on startup. Format version `"2.0"`.
 
-**Model search order** (GUI): Custom path in QSettings (highest priority) → glob `models/spotilyzer_model_*.joblib` (newest by mtime) → project root → `~/.spotilyzer/models/` → fallback to legacy `spotilyzer_model.joblib` → PyInstaller bundle (`sys._MEIPASS`).
+**Model search order** (GUI): Custom path in QSettings (highest priority) → `models/active_model.txt` (filename pointer) → glob `models/spotilyzer_model_*.joblib` (newest by mtime) → project root → `~/.spotilyzer/models/` → fallback to legacy `spotilyzer_model.joblib` → PyInstaller bundle (`sys._MEIPASS`).
 
 **Audio preview**: `QMediaPlayer` + `QAudioOutput` from `PySide6.QtMultimedia`. Supports MP3, FLAC, WAV, OGG via Windows Media Foundation backend.
 
@@ -231,7 +237,7 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 ## Model Performance (current)
 
-All metrics on real holdout set (20%, 4545 samples). Source: SpotilyzerTraining `evaluation_report_*.json`.
+All metrics on real holdout set (20%, 4545 samples). Source: SpotilyzerTraining `evaluation_report_*.json`. **Note:** holdout samples are 30s clips (one clip = one Deezer preview). Production inference averages chunk probabilities across the full track; song-level evaluation is still pending.
 
 ### Active Model: MERTv1330M_main+spotify_charts+kworb_validated_20260529 (1024-dim)
 
@@ -244,15 +250,20 @@ Trained on **~22,722 validated samples** (Deezer scouting + Spotify Top 200 Char
 | Flop Recall | **67.5%** ✓ | ≥ 50% |
 | Mid Recall | 34.7% | — |
 
-**Training ceiling reached (Session 8, 2026-03-31):** Hyperparameter sweeps (max_depth 4→6, colsample 0.6→0.8) show monotonic trade-off: more depth → Hit Recall ↑, BA/Flop ↓. Optimum at depth=4, col=0.6. Post-hoc logit adjustment (τ=0.25) achieves BA=65.3% but Hit Recall drops to 73.2% — both targets simultaneously not achievable technically. Audio-only ceiling at ~64–65% BA. Next BA improvement requires additional features (librosa, metadata) or artist dedup in training.
+**Training ceiling reached (Session 8, 2026-03-31):** Hyperparameter sweeps (max_depth 4→6, colsample 0.6→0.8) show monotonic trade-off: more depth → Hit Recall ↑, BA/Flop ↓. BA-optimum is depth=4, col=0.6 (Alternative model). **depth=5 is chosen as default for its higher Hit Recall (86.9% vs. 82.5%); use the Alternative (_20260319) when balanced accuracy or Flop Recall matters more.** Post-hoc logit adjustment (τ=0.25) achieves BA=65.3% but Hit Recall drops to 73.2% — both targets simultaneously not achievable technically. Audio-only ceiling at ~64–65% BA. Next BA improvement requires additional features (librosa, metadata) or artist dedup in training.
 
-### Predecessor: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (Session 5, ~8,960 val.)
+### Alternative: MERTv1330M_main+spotify_charts+kworb_validated_20260319 (depth=4, BA-optimal)
 
-| Metric | Value |
-|--------|-------|
-| Balanced Accuracy | 63.0% |
-| Hit Recall | 72.8% |
-| Flop Recall | 68.7% ✓ |
+Trained on **~22,722 validated samples**, same dataset as default. XGBoost: max_depth=4, colsample=0.6 — BA-optimal hyperparameters from Session 8 sweep. Holdout: 4545 samples (20%).
+
+| Metric | Value | Target |
+|--------|-------|--------|
+| Balanced Accuracy | **64.2%** | ≥ 65% |
+| Hit Recall | **82.5%** ✓ | ≥ 80% |
+| Flop Recall | **73.5%** ✓ | ≥ 50% |
+| Mid Recall | 36.6% | — |
+
+**Trade-off vs. default:** Higher BA (+1.2 pp) and Flop Recall (+6.0 pp); lower Hit Recall (−4.4 pp). Use when balanced accuracy or Flop detection matters more than maximising Hit Recall.
 
 **Practical use:** Hit Recall target ≥80% reached. Flop filter works well. Mid class remains difficult (34.7% Recall) — frequently confused with Hit.
 
