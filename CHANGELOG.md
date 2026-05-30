@@ -8,6 +8,8 @@ History before the first entry below lives in `git log`.
 ---
 
 ## 2026-05-30 (continued)
+- tests/test_clap.py, tests/conftest.py — CLAP test suite: 20 unit tests covering CLAPResult serialization, audio resampling, waveform chunking, score aggregation and top-tag ranking; model mocked (no weights download); @pytest.mark.slow integration test for real inference.
+- pyproject.toml — pytest slow marker registered.
 - spotilyzer/gui/widgets/waveform.py — waveform rendering fix: paintEvent now iterates over widget pixels (x=0…w-1) and maps to data via idx=int(x*n/w); previously x=int(i*x_scale) compressed all bars into ~38% of widget width when target_width > widget width.
 - spotilyzer/core/clap_analyzer.py — CLAP fix: resample audio to 48 kHz before ClapFeatureExtractor (raises ValueError instead of resampling silently); prior 44.1 kHz files produced no result.
 - spotilyzer/core/pipeline.py — CLAP error isolation: CLAP block now has its own try/except; ValueError/RuntimeError from CLAP no longer discards the already-computed MERT rating.

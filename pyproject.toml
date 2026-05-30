@@ -48,3 +48,8 @@ spotilyzer-gui = "spotilyzer.gui.app:run_app"
 [tool.setuptools.packages.find]
 include = ["spotilyzer*"]
 exclude = ["training*", "legacy*", "tests*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: requires real model weights and test audio; run with -m slow",
+]
