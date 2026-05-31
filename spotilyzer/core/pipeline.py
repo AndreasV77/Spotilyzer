@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
+import numpy as np
+
 from spotilyzer.core.embedder import MERTEmbedder
 from spotilyzer.core.predictor import SpotilyzerPredictor
 from spotilyzer.core.audio_info import extract_audio_info, extract_waveform_display
@@ -190,6 +192,8 @@ class AnalysisPipeline:
             # 2. Prediction (XGBoost pro Chunk, mean der Wahrscheinlichkeiten)
             notify(f"Analysiere: {filepath.name}...")
             probabilities, rating, confidence = self.predictor.predict_chunks(chunk_embeddings)
+            # Mean-pooled Embedding für Similarity-Suche ("Sounds like ...")
+            track_embedding = np.mean(chunk_embeddings, axis=0)
 
             # 3. Audio-Info (optional)
             audio_info = None
@@ -232,6 +236,7 @@ class AnalysisPipeline:
                 clap_result=clap_result,
             )
             result._waveform = waveform
+            result._embedding = track_embedding
             return result
 
         except Exception as e:

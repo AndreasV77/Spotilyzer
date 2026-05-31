@@ -172,6 +172,8 @@ class AnalysisResult:
 
     # Nicht persistiert (nur für aktive GUI-Session)
     _waveform: Optional[np.ndarray] = field(default=None, repr=False, compare=False)
+    # Mean-pooled MERT-Embedding (1024-dim); None für ältere/importierte Ergebnisse
+    _embedding: Optional[np.ndarray] = field(default=None, repr=False, compare=False)
 
     @property
     def is_error(self) -> bool:

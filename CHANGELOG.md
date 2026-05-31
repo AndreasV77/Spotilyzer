@@ -7,6 +7,13 @@ History before the first entry below lives in `git log`.
 
 ---
 
+## 2026-05-31
+- spotilyzer/core/similarity.py — new: cosine_similarity() + find_similar(); session-only, compares mean-pooled MERT embeddings.
+- spotilyzer/data/models.py — AnalysisResult: added _embedding field (non-persistent, session-only, like _waveform).
+- spotilyzer/core/pipeline.py — stores mean-pooled track embedding in result._embedding after prediction.
+- spotilyzer/gui/panels/tech_panel.py — "Klingt ähnlich wie" section: set_similar() renders top-N similar tracks with rating colour + similarity %.
+- spotilyzer/gui/app.py — _on_result_clicked calls find_similar() and passes results to TechPanel.
+
 ## 2026-05-30 (continued)
 - tests/test_clap.py, tests/conftest.py — CLAP test suite: 20 unit tests covering CLAPResult serialization, audio resampling, waveform chunking, score aggregation and top-tag ranking; model mocked (no weights download); @pytest.mark.slow integration test for real inference.
 - pyproject.toml — pytest slow marker registered.

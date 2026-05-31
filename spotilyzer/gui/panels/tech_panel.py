@@ -133,6 +133,25 @@ class TechPanel(QDockWidget):
         self._waveform.position_clicked.connect(self._on_waveform_clicked)
         scroll_layout.addWidget(self._waveform)
 
+        # ── Ähnliche Tracks ──
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.HLine)
+        sep2.setFrameShadow(QFrame.Shadow.Sunken)
+        scroll_layout.addWidget(sep2)
+
+        similar_title = QLabel("Klingt ähnlich wie")
+        similar_title.setStyleSheet("font-weight: bold; font-size: 12px;")
+        scroll_layout.addWidget(similar_title)
+
+        self._similar_container = QWidget()
+        self._similar_layout = QVBoxLayout(self._similar_container)
+        self._similar_layout.setContentsMargins(0, 2, 0, 0)
+        self._similar_layout.setSpacing(3)
+        self._similar_placeholder = QLabel("Kein Track ausgewählt")
+        self._similar_placeholder.setObjectName("MutedLabel")
+        self._similar_layout.addWidget(self._similar_placeholder)
+        scroll_layout.addWidget(self._similar_container)
+
         scroll_layout.addStretch()
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll)
@@ -262,6 +281,7 @@ class TechPanel(QDockWidget):
         self._rating_label.setStyleSheet("")
         self._clear_info_fields()
         self._waveform.clear()
+        self.set_similar([])
         self._btn_play.setEnabled(False)
         self._btn_stop.setEnabled(False)
         self._seek_slider.setEnabled(False)
@@ -269,6 +289,61 @@ class TechPanel(QDockWidget):
         self._time_label.setText("0:00 / 0:00")
 
     # ── Audio-Info Felder ────────────────────────────────────────────
+
+    def set_similar(self, similar: list) -> None:
+        """
+        Zeigt die Liste ähnlicher Tracks an.
+
+        Args:
+            similar: [(AnalysisResult, float)] — absteigend nach Similarity-Score.
+                     Leere Liste oder [] wenn kein Embedding verfügbar.
+        """
+        # Alte Einträge entfernen
+        while self._similar_layout.count():
+            item = self._similar_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        if not similar:
+            lbl = QLabel("Kein Embedding verfügbar\n(Track vor dieser Session analysiert?)")
+            lbl.setObjectName("MutedLabel")
+            lbl.setWordWrap(True)
+            self._similar_layout.addWidget(lbl)
+            return
+
+        rating_colors = {"hit": "#22c55e", "mid": "#eab308", "flop": "#ef4444"}
+
+        for result, score in similar:
+            row = QHBoxLayout()
+            row.setSpacing(6)
+
+            # Dateiname (ohne Extension, gekürzt)
+            name = result.file
+            if len(name) > 32:
+                name = name[:29] + "…"
+            name_lbl = QLabel(name)
+            name_lbl.setToolTip(result.path)
+            row.addWidget(name_lbl, stretch=1)
+
+            # Rating-Pill
+            color = rating_colors.get(result.rating, "#a5a5a5")
+            rating_lbl = QLabel(result.rating.upper())
+            rating_lbl.setStyleSheet(
+                f"color: {color}; font-size: 10px; font-weight: bold;"
+            )
+            rating_lbl.setFixedWidth(34)
+            row.addWidget(rating_lbl)
+
+            # Similarity-Score
+            score_lbl = QLabel(f"{score:.0%}")
+            score_lbl.setObjectName("MutedLabel")
+            score_lbl.setFixedWidth(36)
+            score_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            row.addWidget(score_lbl)
+
+            container = QWidget()
+            container.setLayout(row)
+            self._similar_layout.addWidget(container)
 
     def _populate_info_fields(self, audio_info: AudioInfo | None) -> None:
         """Füllt die Formular-Felder mit AudioInfo-Daten."""

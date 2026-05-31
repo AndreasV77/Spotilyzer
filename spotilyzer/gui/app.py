@@ -38,6 +38,7 @@ from spotilyzer.gui.panels.history_panel import HistoryPanel
 from spotilyzer.gui.panels.tech_panel import TechPanel
 from spotilyzer.gui.panels.settings_panel import SettingsPanel
 from spotilyzer.gui.worker import PipelineInitWorker, AnalysisWorker, WaveformWorker
+from spotilyzer.core.similarity import find_similar
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -557,6 +558,10 @@ class SpotilyzerApp(QMainWindow):
         self._tech_panel.set_result(result)
         self._tech_panel.show()
         self._tech_panel.raise_()
+
+        # Ähnliche Tracks berechnen und anzeigen
+        similar = find_similar(result, self._results, top_n=5)
+        self._tech_panel.set_similar(similar)
 
         # Waveform nachladen falls nicht enthalten (z. B. nach JSON-Import)
         if result._waveform is None and not result.is_error:
