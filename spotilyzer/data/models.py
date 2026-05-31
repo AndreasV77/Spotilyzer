@@ -169,6 +169,7 @@ class AnalysisResult:
     model_info: Optional[ModelInfo] = None  # Modell-/Datensatz-Info für Vergleichbarkeit
     clap_result: Optional["CLAPResult"] = None  # Zero-Shot Genre/Mood (optional, nur wenn aktiviert)
     error: Optional[str] = None          # Fehlermeldung wenn Analyse fehlschlug
+    model_id: Optional[str] = None       # Datum-Suffix des Modells, z.B. "20260529"; None = unbekannt
 
     # Nicht persistiert (nur für aktive GUI-Session)
     _waveform: Optional[np.ndarray] = field(default=None, repr=False, compare=False)
@@ -196,6 +197,8 @@ class AnalysisResult:
             "path": self.path,
             "timestamp": self.timestamp,
         }
+        if self.model_id is not None:
+            d["model_id"] = self.model_id
         if self.error:
             d["error"] = self.error
         else:
@@ -263,6 +266,7 @@ class AnalysisResult:
             model_info=model_info,
             clap_result=clap_result,
             error=data.get("error"),
+            model_id=data.get("model_id"),
         )
 
 

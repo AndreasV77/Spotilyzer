@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 
 from spotilyzer import __version__, SUPPORTED_FORMATS
 from spotilyzer.data.models import AnalysisResult, AppMode, SortMode
-from spotilyzer.data.persistence import save_results, load_results, ResultExporter
+from spotilyzer.data.persistence import save_results, load_results, append_to_log, ResultExporter
 from spotilyzer.gui.theme import ThemeManager, ThemeMode
 from spotilyzer.gui.central import CentralWidget
 from spotilyzer.gui.panels.file_panel import FilePanel
@@ -491,6 +491,12 @@ class SpotilyzerApp(QMainWindow):
         """Einzelnes Analyse-Ergebnis bereit."""
         self._results.append(result)
         self._central.add_result(result)
+
+        # Log-Eintrag schreiben (nur erfolgreiche Analysen)
+        try:
+            append_to_log(result)
+        except Exception:
+            pass
 
         # Panels aktualisieren
         self._highscore_panel.set_results(self._results)

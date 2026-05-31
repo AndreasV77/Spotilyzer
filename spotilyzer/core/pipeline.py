@@ -50,6 +50,10 @@ class AnalysisPipeline:
         self.model_path = model_path
         self.vram_mode = vram_mode
 
+        # Date-suffix aus dem Modell-Dateinamen (z.B. "20260529"), None wenn nicht erkennbar
+        date_tag = model_path.stem.rsplit("_", 1)[-1]
+        self._model_id: Optional[str] = date_tag if (date_tag.isdigit() and len(date_tag) == 8) else None
+
         self._notify("Lade Spotilyzer-Modell...")
         self.predictor = SpotilyzerPredictor(model_path)
 
@@ -234,6 +238,7 @@ class AnalysisPipeline:
                 audio_info=audio_info,
                 model_info=self._model_info,
                 clap_result=clap_result,
+                model_id=self._model_id,
             )
             result._waveform = waveform
             result._embedding = track_embedding

@@ -25,6 +25,7 @@ from spotilyzer.data.models import AnalysisResult, MEDALS
 # ══════════════════════════════════════════════════════════════════════════════
 
 DEFAULT_SAVE_PATH = Path("spotilyzer_results.json")
+DEFAULT_LOG_PATH = Path("spotilyzer_log.jsonl")
 
 
 def save_results(
@@ -40,6 +41,43 @@ def save_results(
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def append_to_log(
+    result: AnalysisResult,
+    path: Path = DEFAULT_LOG_PATH,
+) -> None:
+    """Hängt ein einzelnes Analyse-Ergebnis ans Log-File (JSONL, append-only).
+
+    Fehler-Ergebnisse werden nicht geloggt. Das Log ist eine vollständige
+    historische Aufzeichnung aller erfolgreichen Analysen über alle Sessions.
+    """
+    if result.is_error:
+        return
+    with open(path, "a", encoding="utf-8") as f:
+        json.dump(result.to_dict(), f, ensure_ascii=False)
+        f.write("\n")
+
+
+def load_log(path: Path = DEFAULT_LOG_PATH) -> list[AnalysisResult]:
+    """Lädt alle Einträge aus dem Log-File (JSONL).
+
+    Defekte Zeilen werden übersprungen — das Log bleibt lesbar auch wenn
+    einzelne Einträge beschädigt sind.
+    """
+    if not path.exists():
+        return []
+    results = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                results.append(AnalysisResult.from_dict(json.loads(line)))
+            except Exception:
+                pass
+    return results
 
 
 def load_results(path: Path = DEFAULT_SAVE_PATH) -> list[AnalysisResult]:
