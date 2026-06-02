@@ -7,6 +7,11 @@ History before the first entry below lives in `git log`.
 
 ---
 
+## 2026-06-02
+- spotilyzer/gui/app.py — duplicate guard in _on_result_ready: path-based check skips result if same path already in _results (prevents double-analysis of folders with symlinked/copied files).
+- spotilyzer/gui/app.py — settings persistence fix: QApplication.aboutToQuit connected to _save_app_settings as fallback for Ctrl+C terminal kills (closeEvent not triggered).
+- spotilyzer/gui/app.py — settings persistence fix: restoreGeometry/restoreState moved out of _load_app_settings into new _restore_window_state(); deferred via QTimer.singleShot(0) to run after show(), prevents Qt overwriting geometry on first paint.
+
 ## 2026-05-31
 - spotilyzer/core/similarity.py — new: cosine_similarity() + find_similar(); session-only, compares mean-pooled MERT embeddings.
 - spotilyzer/data/models.py — AnalysisResult: added _embedding field (non-persistent, session-only, like _waveform).

@@ -99,6 +99,11 @@ class SpotilyzerApp(QMainWindow):
         # Einstellungen laden
         self._load_app_settings()
 
+        # aboutToQuit als zweite Save-Sicherung (greift auch bei Ctrl+C im Terminal,
+        # wenn closeEvent nicht durchläuft)
+        from PySide6.QtWidgets import QApplication as _QApp
+        _QApp.instance().aboutToQuit.connect(self._save_app_settings)
+
         # Theme anwenden
         self._apply_theme()
 
@@ -489,6 +494,9 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_result_ready(self, result: AnalysisResult) -> None:
         """Einzelnes Analyse-Ergebnis bereit."""
+        # Duplikat-Schutz: gleiche Datei (path) nicht zweimal aufnehmen
+        if any(r.path == result.path for r in self._results):
+            return
         self._results.append(result)
         self._central.add_result(result)
 
@@ -822,14 +830,9 @@ class SpotilyzerApp(QMainWindow):
         # View-Modus anwenden
         self._set_app_mode(self._app_mode)
 
-        # Window-State wiederherstellen
-        geometry = self._settings.value("window/geometry")
-        if geometry:
-            self.restoreGeometry(geometry)
-
-        state = self._settings.value("window/state")
-        if state:
-            self.restoreState(state)
+        # Window-State wiederherstellen — erst nach show() ausführen,
+        # damit Qt die Geometrie nicht beim ersten Paint überschreibt
+        QTimer.singleShot(0, self._restore_window_state)
 
         # Dir-Persistenz laden
         self._last_open_dir = self._settings.value("files/last_open_dir", "")
@@ -841,6 +844,15 @@ class SpotilyzerApp(QMainWindow):
         if start_dir:
             self._file_panel.set_folder(Path(start_dir))
         self._central.set_open_dir(self._effective_open_dir())
+
+    def _restore_window_state(self) -> None:
+        """Stellt Fenstergeometrie und Dock-Layout nach show() wieder her."""
+        geometry = self._settings.value("window/geometry")
+        if geometry:
+            self.restoreGeometry(geometry)
+        state = self._settings.value("window/state")
+        if state:
+            self.restoreState(state)
 
     # ── Window-Events ────────────────────────────────────────────────
 
