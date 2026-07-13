@@ -51,7 +51,7 @@ Switch `CLAP_MODEL_NAME` in `spotilyzer/__init__.py:25` from `laion/larger_clap_
 - General-purpose, not music-specialized; known weakness on metal subgenre discrimination is accepted for now.
 - No other code changes required.
 
-Do NOT switch to `laion/larger_clap_general` or `laion/larger_clap_music_and_speech`: same HF conversion lineage as the broken checkpoint; Issue #126 shows the conversion damage affects HTSAT-base conversions generally. (Corroborating datapoint: in Li et al., ICML 2026, `larger_clap_general` is by far the weakest LAION variant tested.)
+Do NOT switch to `laion/larger_clap_general` or `laion/larger_clap_music_and_speech`: same HF conversion lineage as the broken checkpoint; Issue #126 shows the conversion damage affects HTSAT-base conversions generally. ~~(Corroborating datapoint: in Li et al., ICML 2026, `larger_clap_general` is by far the weakest LAION variant tested.)~~ **[Correction 2026-07-13: this "Li et al., ICML 2026" citation could not be verified — a web search turned up no such paper. Treat as unconfirmed/likely fabricated; the Issue #126 reasoning above stands on its own without it.]**
 
 ### Stage 2 — recover the music-specialized model (separate session)
 
@@ -87,12 +87,14 @@ If the `laion_clap` music backend passes, it becomes the primary tag scorer.
 
 ## 7. Architecture link: two backends → Stufe 2 confidence scoring
 
-Li et al., "Stacking Complementary CLAP Embeddings" (ICML 2026), shows that different CLAP variants make **complementary** errors and that cross-model agreement is a stronger reliability signal than any single model. Their supervised stacking regressor is not transferable (requires human-labeled correspondence scores), but the cheap variant is:
+**⚠ Correction (2026-07-13):** The paper cited below, "Li et al., 'Stacking Complementary CLAP Embeddings' (ICML 2026)," could not be verified — a web search found no such paper. Treat it as unconfirmed and likely fabricated (a hallucinated citation from the session that produced this v2 doc). The architectural idea itself (dual-backend agreement as a confidence signal) is not thereby disproven, but it is currently **unsupported speculation, not a research-backed recommendation** — do not cite this section as "the literature says" without independently verifying the idea's merit first (e.g. via a small internal experiment, not another citation search).
+
+~~Li et al., "Stacking Complementary CLAP Embeddings" (ICML 2026), shows that different CLAP variants make **complementary** errors and that cross-model agreement is a stronger reliability signal than any single model. Their supervised stacking regressor is not transferable (requires human-labeled correspondence scores), but the cheap variant is:~~
 
 - Run tag scoring on both backends (`clap-htsat-fused` + `laion_clap` music).
 - **Agreement → high confidence** for the tag score; **disagreement → emit "unbestimmt" / low confidence.**
 
-This directly implements the Stufe-2 design principle "prefer 'unbestimmt' with low confidence over guessing" for instrument/vocal/genre presence tags. The dual-backend setup from Stage 2 is therefore not throwaway evaluation scaffolding but the intended Stufe-2 architecture.
+This directly implements the Stufe-2 design principle "prefer 'unbestimmt' with low confidence over guessing" for instrument/vocal/genre presence tags. Whether the dual-backend setup from Stage 2 is worth building as *the* Stufe-2 architecture (rather than throwaway evaluation scaffolding) should be decided on its own merits, not on the strength of the retracted citation above.
 
 ## 8. Reference files/paths
 

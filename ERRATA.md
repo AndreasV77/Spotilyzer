@@ -11,8 +11,11 @@ Rules:
 > Audit of 2026-05-29 **verified against the source eval reports** (Level 1):
 > `evaluation_report_..._20260529.json` (BA 63.0 / Hit 86.9 / Flop 67.5 / Mid 34.7)
 > and `evaluation_report_..._20260319.json` (BA 64.2 / Hit 82.5 / Flop 73.5 / Mid 36.6),
-> both on the 4545-sample holdout. Model files in `models/` verified present:
-> both `_20260529` (default) and `_20260319` (alternative) `.joblib` exist.
+> both on the 4545-sample holdout. Model files in `models/` verified present at the time:
+> both `_20260529` (default) and `_20260319` (alternative) `.joblib` existed.
+>
+> **Superseded 2026-07-13:** `_20260319` archived to `P:\BACKUP\Archive` (see CHANGELOG.md,
+> models/MODEL_COMPARISON.md). Only `_20260529` remains in `models/` as of this date.
 > Status below reflects the current file state.
 
 | ID | Found | File | Defect | Status |
