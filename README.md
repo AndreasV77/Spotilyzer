@@ -43,13 +43,13 @@ spotilyzer-cli "my_track.mp3"
 
 ## Model Performance (current)
 
-Trained on **~22,722 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 12 markets), 1024-dim MERT-v1-330M embeddings. Holdout set: 4545 samples (20%, each sample = one 30s clip). Production averages chunk probabilities over the full track; song-level evaluation pending.
+Trained on **24,170 validated samples** (Deezer 30s previews + Spotify Charts + Kworb historical charts, 12 markets; refreshed 2026-07-13), 1024-dim MERT-v1-330M embeddings. Holdout set: 4,834 samples (20%, each sample = one 30s clip). Production averages chunk probabilities over the full track; song-level evaluation pending.
 
 | Metric            | Value          | Target |
 |-------------------|----------------|--------|
-| Balanced Accuracy | **63.0 %**     | ≥ 65 % |
-| Hit Recall        | **86.9 %** ✓   | ≥ 80 % |
-| Flop Recall       | **67.5 %** ✓   | ≥ 50 % |
+| Balanced Accuracy | **64.3 %**     | ≥ 65 % |
+| Hit Recall        | **82.4 %** ✓   | ≥ 80 % |
+| Flop Recall       | **74.5 %** ✓   | ≥ 50 % |
 
 **Interpretation:** ≥ 85 % confidence = genuine potential. < 60 % = uncertain, treat as Mid.
 Inference: ~0.8 s/track on GTX 1660 Ti.
@@ -99,17 +99,18 @@ Training runs in the separate repository [SpotilyzerTraining](https://github.com
 **Data sources:**
 - **Deezer API** — 30s previews + popularity rank (free, no auth)
 - **Last.fm API** — playcount + listeners for label validation
-- **Spotify Charts CSV** — Top 200 Charts (manual, 7 markets)
+- **Spotify Charts CSV** — Top 200 Charts (manual, 10 markets)
 - **Kworb.net** — historical chart data (peak_position, weeks_in_chart)
 - **MusicBrainz API** — ISRC lookup for deduplication
 
-**Current dataset:** ~22,722 validated samples, ~14,991 hits, 23 genre clusters + chart expansion across 12 markets
+**Current dataset:** 24,170 validated samples, 15,980 hits, 23 genre clusters + chart expansion across 12 markets (refreshed 2026-07-13)
 
 **Deployment:**
 ```powershell
 # After training in SpotilyzerTraining:
 Copy-Item outputs/models/spotilyzer_model_MERTv1330M_*_validated_*.joblib ..\Spotilyzer\models\
-Copy-Item outputs/reports/training_report_MERTv1330M_*_validated_*.json   ..\Spotilyzer\models\
+# NOTE: report filenames have no "_validated_" segment (unlike the model .joblib)
+Copy-Item outputs/reports/training_report_MERTv1330M_*.json                ..\Spotilyzer\models\
 ```
 
 ---
@@ -139,7 +140,7 @@ spotilyzer/          # Installable package
     EN/
       strings.py     # All English UI strings (localization foundation)
 training/            # DEPRECATED — kept for reference only; active training scripts are in SpotilyzerTraining repo
-models/              # spotilyzer_model.joblib + training_report.json
+models/              # spotilyzer_model_*.joblib + training_report_*.json (full-named), active_model.txt, model_names.json
 resources/           # GUI assets
 legacy/              # Archived Spotify API scripts (reference only)
 ```

@@ -63,16 +63,16 @@ Standard audio properties: duration, sample rate, channel count, bitrate, format
 
 ### Hit prediction
 
-Three-class classification on MERT embeddings (1024 dimensions, model `m-a-p/MERT-v1-330M`) with XGBoost. Trained on ~22,700 validated samples from Deezer charts, Spotify Top 200 and Kworb history across 12 markets.
+Three-class classification on MERT embeddings (1024 dimensions, model `m-a-p/MERT-v1-330M`) with XGBoost. Trained on 24,170 validated samples from Deezer charts, Spotify Top 200 and Kworb history across 12 markets (refreshed 2026-07-13).
 
-Current performance on holdout (4,545 samples):
+Current performance on holdout (4,834 samples):
 
 | Metric | Value |
 |---|---|
-| Balanced accuracy | 63.0 % |
-| Hit recall | 86.9 % |
-| Flop recall | 67.5 % |
-| Mid recall | 34.7 % |
+| Balanced accuracy | 64.3 % |
+| Hit recall | 82.4 % |
+| Flop recall | 74.5 % |
+| Mid recall | 36.0 % |
 
 Mid remains difficult (frequently confused with Hit). The audio-only ceiling without metadata and without artist-deduplicated training sits around 64–65 % BA.
 
@@ -152,7 +152,7 @@ Demucs integration on demand (~3 GB model, ~5–10 s per track on GPU). Separate
 
 - **BPM metric level** — the beat tracker locks onto the quarter-note pulse. In genres with a strong half-time feel (typical in metal, trap, several electronic styles), the reported BPM corresponds to the "groove pulse" rather than the perceived tempo level. A genre-aware heuristic would be required and is not yet implemented.
 - **CLAP on metal subgenres** — `laion/clap-htsat-fused` (general-purpose, not music-specialized) does not reliably distinguish gothic / doom / black / death metal, and shows an unexplained bias toward "hip-hop" scoring high regardless of genre. Adding specific subgenre tags to the tag list helps marginally. Recovering a music-specialized model via the original `laion_clap` checkpoint is planned.
-- **Mid class recall** — 34.7 %. Mid tracks are frequently classified as Hit. Below ~60 % confidence, results should be treated as uncertain.
+- **Mid class recall** — 36.0 %. Mid tracks are frequently classified as Hit. Below ~60 % confidence, results should be treated as uncertain.
 - **Audio-only BA ceiling** — ~64–65 %. Improvements require artist-level deduplication (GroupKFold) during training or additional metadata features.
 
 ---

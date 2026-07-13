@@ -75,7 +75,7 @@ clarity take priority over tonal fidelity.
 - `models/spotilyzer_model_*.joblib` — trained XGBoost model (full-named, e.g. `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260529.joblib`)
 - `models/training_report_*.json` — training metadata (full-named, e.g. `training_report_MERTv1330M_main+spotify_charts+kworb_validated_20260529.json`); optional but shown in GUI
 
-**⚠ Known code gap:** `pipeline.py` currently loads `model_path.parent / "training_report.json"` (bare name). Since no bare-name report exists, model metadata is silently empty in the GUI. Fix: update `pipeline.py` to glob for `training_report_*.json` adjacent to the active model file.
+**Report resolution:** `pipeline.py` (`_find_report_path()`) locates the report by matching the active model's date tag (last `_`-segment of the model stem, e.g. `20260713`) against `training_report_*{date}.json`, falling back to the newest `training_report_*.json` next to the model, then to the bare legacy name. The date-tag match handles the `_validated` suffix asymmetry between model and report filenames. (Bare-name-only lookup was SP-011, fixed 2026-05-30.)
 
 **The main project has NO dependency on the training repo.** It only consumes the finished model.
 
@@ -99,7 +99,7 @@ clarity take priority over tonal fidelity.
 - **Install with dev deps**: `pip install -e ".[dev]"` (adds pyinstaller, pytest)
 - **Model required**: at least one `models/spotilyzer_model_*.joblib` must exist before running. The active model is selected via `models/active_model.txt` (filename pointer) or, if absent, the newest `*.joblib` by mtime. The bare `models/spotilyzer_model.joblib` is the legacy fallback only.
 - **MERT-v1-330M model** (~1.3 GB): auto-downloaded by HuggingFace `transformers` on first run to `~/.cache/huggingface/hub/`
-- **CLAP model** (~776 MB): auto-downloaded on first `--include-clap` run to `~/.cache/huggingface/hub/`
+- **CLAP model** (~600 MB): auto-downloaded on first `--include-clap` run to `~/.cache/huggingface/hub/`
 
 ## Common Commands
 
@@ -160,7 +160,8 @@ spotilyzer/              # installable package (pyproject.toml), version 2.0.0
       strings.py         # All English UI strings
 legacy/                  # archived old Spotify-API-based scripts (read-only reference)
 resources/               # GUI assets (icons, images)
-models/                  # spotilyzer_model.joblib + training_report.json (bundled in exe)
+models/                  # spotilyzer_model_*.joblib + training_report_*.json (full-named),
+                         # active_model.txt, model_names.json (bundled in exe)
 # Root-level legacy files (NOT part of the package, kept for reference):
 analyze_track.py         # legacy standalone CLI (predates spotilyzer.cli package)
 spotilyzer_gui.py        # legacy Tkinter GUI (predates PySide6 rewrite)
@@ -186,7 +187,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **CLAP tag sets**: `DEFAULT_TAG_SETS` in `clap_analyzer.py` defines genre and mood tag lists. Custom tag sets can be passed via `clap_tag_sets` parameter. Metal subgenres ("gothic metal", "doom metal", etc.) should be added for better accuracy on heavy music.
 
-**Model file format**: `models/spotilyzer_model_*.joblib` is a `dict` with keys `"model"` (XGBoost) and `"label_encoder"` (sklearn LabelEncoder). The optional `models/training_report_*.json` (same date suffix as the model) provides metadata shown in the GUI. See ⚠ note under Interface Between Projects above — bare-name lookup in `pipeline.py` is a known code gap.
+**Model file format**: `models/spotilyzer_model_*.joblib` is a `dict` with keys `"model"` (XGBoost) and `"label_encoder"` (sklearn LabelEncoder). The optional `models/training_report_*.json` (same date suffix as the model) provides metadata shown in the GUI. Lookup is date-tag matched with glob fallback — see "Report resolution" under Interface Between Projects above.
 
 **Audio preprocessing**: mono conversion → resample to 24 kHz → split into 30s chunks (overlap-free, last chunk zero-padded, <5s tail discarded) → MERT embedding per chunk → XGBoost per chunk → mean(probabilities) → final rating. Each chunk is scored independently, matching the training format (Deezer 30s-previews = 1 chunk = 1 embedding).
 
@@ -206,7 +207,7 @@ The old scripts are kept as reference but should no longer be used.
 
 **Layout persistence**: dock panel positions saved/restored via `QSettings.saveState()` / `restoreState()`. Organization: `"Spotilyzer"`, App: `"Spotilyzer"`.
 
-**Packaging**: PyInstaller `--onedir` via `spotilyzer.spec`. MERT-v1-330M and CLAP (~1.3 GB / ~776 MB) are NOT bundled — downloaded on first run. After build, `strip_cuda.py` removes unused CUDA DLLs saving ~1.5 GB. Total bundled size ~3 GB.
+**Packaging**: PyInstaller `--onedir` via `spotilyzer.spec`. MERT-v1-330M and CLAP (~1.3 GB / ~600 MB) are NOT bundled — downloaded on first run. After build, `strip_cuda.py` removes unused CUDA DLLs saving ~1.5 GB. Total bundled size ~3 GB.
 
 ## Intended Usage Profile
 
@@ -265,7 +266,7 @@ Trained on **24,170 validated samples** (Deezer scouting + Spotify Top 200 Chart
 
 `d3c08` (depth=3/col=0.8) is kept in `SpotilyzerTraining/outputs/models/` for manual testing on varied tracks — the only config crossing BA≥65%, at the cost of Hit Recall dropping below 80%. Not a deploy candidate yet. Post-hoc logit adjustment (τ=0.25) on the old depth=4/col=0.6 baseline achieved BA=65.3% but Hit Recall dropped to 73.2% — both targets simultaneously not achievable technically via that route either. Full detail: `SpotilyzerTraining/CLAUDE.md` Session 11, `models/MODEL_COMPARISON.md`.
 
-**Practical use:** Hit Recall target ≥80% reached. Flop filter works well. Mid class remains difficult (34.7% Recall) — frequently confused with Hit.
+**Practical use:** Hit Recall target ≥80% reached. Flop filter works well. Mid class remains difficult (36.0% Recall) — frequently confused with Hit.
 
 **Model bias:** 85%+ confidence = genuine potential. < 60% = uncertain, treat as Mid. Deezer rank thresholds: Flop < 300k, Mid 300k–700k, Hit > 700k.
 
@@ -379,7 +380,7 @@ Planned: Upgrade to 16+ GB
 - [x] CLI integration: `--include-clap` flag
 - [x] GUI integration: settings checkbox + display in Result-Card (PRO mode)
 - [x] Sequential VRAM mode works on 6 GB
-- [ ] Tests for similarity calculation
+- [x] Tests for similarity calculation (`tests/test_clap.py`, 22 tests: serialization, resampling, chunking, score aggregation, top-tag ranking)
 
 ### Reference Documents
 

@@ -8,6 +8,15 @@ History before the first entry below lives in `git log`.
 ---
 
 ## 2026-07-13
+- CLAUDE.md — SP-012: "Practical use" Mid Recall corrected 34.7% → 36.0% (retired `_20260529` value replaced with the active `_20260713` report figure).
+- CLAUDE.md — SP-013: "⚠ Known code gap" paragraph replaced with "Report resolution" describing the implemented date-tag match + glob fallback in `pipeline.py` (`_find_report_path()`); "Model file format" cross-reference updated. The gap was fixed 2026-05-30 (SP-011); the doc still described it as open.
+- CLAUDE.md — SP-014: CLAP download size corrected ~776 MB → ~600 MB in Setup bullet and Packaging paragraph (measured local HF cache: 589 MB; Known Issues figure was already correct).
+- CLAUDE.md, README.md — SP-015: package-tree `models/` comment updated from bare `spotilyzer_model.joblib + training_report.json` to actual contents (full-named `_*.joblib`/`_*.json`, `active_model.txt`, `model_names.json`).
+- README.md — SP-016: "Model Performance (current)" updated to deployed `_20260713` (SLYZR 1.3): BA 64.3 / Hit 82.4 / Flop 74.5, 24,170 samples, 4,834 holdout (was retired `_20260529` figures).
+- README.md — SP-017: Training section refreshed — dataset 24,170 validated samples / 15,980 hits (from `training_report_*_20260713.json`), Spotify Charts 10 markets (2026-07-13 CSV snapshot: au/br/de/fr/gb/global/jp/mx/se/us).
+- README.md — SP-018: deployment Copy-Item glob for reports corrected `training_report_MERTv1330M_*_validated_*.json` → `training_report_MERTv1330M_*.json` (report filenames carry no `_validated_` segment; old glob matched nothing) + explanatory note.
+- FEATURES.md — SP-019: hit-prediction metrics table and dataset/holdout counts updated to `_20260713` (64.3/82.4/74.5/36.0, 24,170 samples, 4,834 holdout); Known Limitations Mid recall 34.7% → 36.0%.
+- CLAUDE.md — SP-020: CLAP acceptance criterion "Tests for similarity calculation" checked off (`tests/test_clap.py` exists, 22 test functions verified).
 - DOC_AUDIT.md — added a "Repo hygiene" section to the audit pass (branch attachment, sync state, tracked-file/.gitignore gaps, working-tree cleanliness). Kept identical to SpotilyzerTraining's copy (canonical) — see that repo's CHANGELOG.md for the full rationale.
 - models/ — deployed `spotilyzer_model_MERTv1330M_depth4refresh_main+spotify_charts+kworb_validated_20260713.joblib` (depth=4/col=0.6, SLYZR 1.3) as the new active model; `active_model.txt` updated. Retired `_20260529` (SLYZR 1.2, depth=5/col=0.8) to `P:\BACKUP\Archive\Spotilyzer_model_20260529_retired_2026-07-13.zip` (its two report JSONs were git-tracked, removed via `git rm`). Verified via `spotilyzer.cli.analyze` end-to-end (model loads, model_id extracts correctly despite the `depth4refresh` filename segment, real inference runs) before committing.
 - models/MODEL_COMPARISON.md, models/model_names.json — updated for the SpotilyzerTraining Session 11 hyperparameter sweep: depth=4/col=0.6 confirmed as standing default (depth=5/col=0.8, the retired model's config, judged a taste call not a technical win). Full comparison table and session history in MODEL_COMPARISON.md.
