@@ -1,10 +1,6 @@
 {
   "20260529": {
     "display": "SLYZR 1.2",
-    "note": "Hit-Recall-Optimum (depth=5, colsample=0.8)"
-  },
-  "20260319": {
-    "display": "SLYZR 1.1",
-    "note": "BA-Optimum (depth=4, colsample=0.6)"
+    "note": "Hit-Recall-Optimum (depth=5, colsample=0.8) — active; successor pending from 2026-07-13 depth=4/col=0.6 sweep"
   }
 }

@@ -11,9 +11,9 @@
 
 ---
 
-## Active Models (as of 2026-05-29)
+## Active Models (as of 2026-07-13)
 
-### Default: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260529.joblib`
+### Currently deployed: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260529.joblib`
 
 | Metric | Value | Target | Status |
 |---|---|---|---|
@@ -26,20 +26,25 @@
 - Training data: 22,722 samples (validated only)
 - Holdout: 4,545 samples — 2,999 Hits / 1,131 Mids / 415 Flops
 
-### Alternative: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260319.joblib`
+**2026-07-13 decision:** depth=5/col=0.8 judged a taste-call trade (a few points of Hit Recall
+for lower BA/Flop Recall/confidence), not a technical win. depth=4/col=0.6 is now the standing
+hyperparameter default in `SpotilyzerTraining/configs/training.yaml`. The former `_20260319`
+Alternative (same hyperparameters, March data) has been archived to `P:\BACKUP\Archive` —
+superseded by a fresh depth=4/col=0.6 sweep on 2026-07-13 data (24,170 validated samples):
 
-| Metric | Value | Target | Status |
+| Config | BA | Hit R. | Flop R. |
 |---|---|---|---|
-| **Hit Recall** | **82.5%** | ≥ 80% | ✅ reached |
-| **Flop Recall** | **73.5%** | ≥ 50% | ✅ reached |
-| **Balanced Accuracy** | **64.2%** | ≥ 65% | ⚠️ −0.8 pp |
-| Mid Recall | 36.6% | — | (known weakness) |
+| depth=4/col=0.6 | 64.3% | 82.4% | 74.5% |
+| depth=4/col=0.7 | 64.5% | 82.8% | 74.7% |
+| depth=4/col=0.8 | 64.7% | 82.8% | 75.2% |
+| depth=3/col=0.8 | 65.3% (first ≥65% BA) | 79.4% | 81.0% |
+| depth=5/col=0.7 | 63.1% | 86.3% | 69.6% |
+| depth=5/col=0.8 (current, refreshed) | 62.2% | 86.5% | 67.7% |
 
-- Hyperparameters: depth=4, colsample=0.6 — BA-optimum from Session 8
-- Training data: 22,722 samples (validated only)
-- Holdout: 4,545 samples — 2,999 Hits / 1,131 Mids / 415 Flops
-
-**Choice:** Default = higher Hit Recall. Alternative = higher BA + better Flop Recall.
+Full training/evaluation reports for all six live in `SpotilyzerTraining/outputs/{models,reports}/`
+(experiment labels `depth4refresh`, `d4c07`, `d4c08`, `d3c08`, `d5c07`, plus the unlabeled
+depth=5/col=0.8 refresh). **Which one replaces `_20260529` as deployed is not yet decided** —
+update this file and `active_model.txt` once that call is made.
 
 ---
 

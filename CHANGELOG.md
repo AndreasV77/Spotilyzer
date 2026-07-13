@@ -8,6 +8,8 @@ History before the first entry below lives in `git log`.
 ---
 
 ## 2026-07-13
+- models/MODEL_COMPARISON.md, models/model_names.json — updated for the SpotilyzerTraining Session 11 hyperparameter sweep: depth=4/col=0.6 confirmed as standing default (depth=5/col=0.8, this active model's config, judged a taste call not a technical win); which candidate (if any) replaces the active `_20260529` model is not yet decided. Full comparison table in MODEL_COMPARISON.md.
+- models/ — removed `archive/` subfolder (7 old models/reports, some git-tracked) and the superseded `_20260319` Alternative model+reports; zipped to `P:\BACKUP\Archive\Spotilyzer_model_archive_2026-07-13.zip` (shared zip with the SpotilyzerTraining-side cleanup, see that repo's changelog) before removal. Active `_20260529` (per `active_model.txt`) left untouched — removing it would leave the app without a working model until a replacement is explicitly chosen.
 - spotilyzer/__init__.py — CLAP_MODEL_NAME switched from laion/larger_clap_music to laion/clap-htsat-fused: the former's HF conversion is defective (text encoder collapse, logit_scale_a≈1.0 vs healthy ~20-100; confirmed via LAION-AI/CLAP#126 and HF discussion #2), producing near-identical genre/mood scores regardless of audio content. General-purpose model accepted as interim trade-off; music-specialized recovery via laion_clap package planned (CLAP_Handoff_2026-07-13_v2.md).
 - spotilyzer/data/models.py — AnalysisResult.model_id (str|None): date-suffix of the active model (e.g. "20260529"); serialized in to_dict()/from_dict(); None for legacy results (backward-compatible).
 - spotilyzer/core/pipeline.py — model_id extracted from the model filename stem at init, exposed via new `model_id` property, set on every AnalysisResult produced.
