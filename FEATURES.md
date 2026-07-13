@@ -29,7 +29,7 @@ Legend: ✅ implemented · 🔶 in progress / blocked · ⚪ planned
 | | Normalization with category thresholds + AI context generator | ✅ | custom implementation |
 | **Diagnostic layer** *(`analysis/`)* | 7-band mix diagnostics: boominess, muddiness, boxiness, harshness, presence, air, sparkle | ✅ | librosa |
 | | Role prominence (kick, bass, vocals, percussion, harmonic) | ✅ | HPSS + frequency-band analysis |
-| **Semantic layer** | Zero-shot genre/mood tags | ✅ | LAION CLAP (`laion/larger_clap_music`) |
+| **Semantic layer** | Zero-shot genre/mood tags | ✅ | LAION CLAP (`laion/clap-htsat-fused`) |
 | | Configurable tag sets (genre, mood, production style) | ✅ | DEFAULT_TAG_SETS + override |
 | **GUI / CLI** | PySide6 GUI with three view modes (Simple/Balanced/Pro) | ✅ | PySide6 |
 | | CLI with JSON / CSV / Markdown / TXT export | ✅ | argparse + custom exporters |
@@ -90,7 +90,7 @@ Three-tier architecture that complements MERT embeddings with interpretable feat
 
 ### Semantic layer (CLAP)
 
-LAION CLAP (`laion/larger_clap_music`) for zero-shot audio-text alignment. Arbitrary tag lists comparable:
+LAION CLAP (`laion/clap-htsat-fused`; general-purpose — `laion/larger_clap_music` was dropped 2026-07-13, its HF conversion is defective, see CLAUDE.md) for zero-shot audio-text alignment. Arbitrary tag lists comparable:
 
 ```python
 clap.analyze(audio, tag_sets={
@@ -151,7 +151,7 @@ Demucs integration on demand (~3 GB model, ~5–10 s per track on GPU). Separate
 ## Known Limitations
 
 - **BPM metric level** — the beat tracker locks onto the quarter-note pulse. In genres with a strong half-time feel (typical in metal, trap, several electronic styles), the reported BPM corresponds to the "groove pulse" rather than the perceived tempo level. A genre-aware heuristic would be required and is not yet implemented.
-- **CLAP on metal subgenres** — `laion/larger_clap_music` does not reliably distinguish gothic / doom / black / death metal. Adding specific subgenre tags to the tag list helps marginally. For production-grade accuracy a fine-tuned classifier would be preferable.
+- **CLAP on metal subgenres** — `laion/clap-htsat-fused` (general-purpose, not music-specialized) does not reliably distinguish gothic / doom / black / death metal, and shows an unexplained bias toward "hip-hop" scoring high regardless of genre. Adding specific subgenre tags to the tag list helps marginally. Recovering a music-specialized model via the original `laion_clap` checkpoint is planned.
 - **Mid class recall** — 34.7 %. Mid tracks are frequently classified as Hit. Below ~60 % confidence, results should be treated as uncertain.
 - **Audio-only BA ceiling** — ~64–65 %. Improvements require artist-level deduplication (GroupKFold) during training or additional metadata features.
 

@@ -23,7 +23,7 @@ The PySide6 GUI rewrite (from Tkinter) was designed around three pillars:
 
 When in doubt: Goal 1 takes priority.
 
-Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/larger_clap_music`.
+Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/clap-htsat-fused` (general-purpose; see Known Issues re: the music-specialized checkpoint).
 
 ---
 
@@ -131,7 +131,7 @@ python strip_cuda.py
 ```
 spotilyzer/              # installable package (pyproject.toml), version 2.0.0
   __init__.py            # SUPPORTED_FORMATS, MERT_MODEL_NAME="m-a-p/MERT-v1-330M",
-                         # MERT_EMBEDDING_DIM=1024, CLAP_MODEL_NAME="laion/larger_clap_music",
+                         # MERT_EMBEDDING_DIM=1024, CLAP_MODEL_NAME="laion/clap-htsat-fused",
                          # TARGET_SAMPLE_RATE=24000, MAX_AUDIO_LENGTH_SEC=30
   core/
     pipeline.py          # AnalysisPipeline — orchestrates Embedder + Predictor + AudioInfo + CLAP
@@ -283,11 +283,13 @@ Trained on **~22,722 validated samples**, same dataset as default. XGBoost: max_
 
 **MERT first-run download:** ~1.3 GB, requires internet, cached at `~/.cache/huggingface/hub/models--m-a-p--MERT-v1-330M/`.
 
-**CLAP first-run download:** ~776 MB, cached at `~/.cache/huggingface/hub/models--laion--larger_clap_music/`.
+**CLAP first-run download:** ~600 MB, cached at `~/.cache/huggingface/hub/models--laion--clap-htsat-fused/`.
 
 **MERT loads on CPU despite CUDA being available:** Likely a `torch` CPU-only wheel in the venv. Verify with `python -c "import torch; print(torch.cuda.is_available())"`. Reinstall with CUDA-enabled torch if needed.
 
-**CLAP genre accuracy on niche genres:** `laion/larger_clap_music` does not reliably distinguish metal subgenres (gothic, doom, black, death) — it tends toward generic labels like "r&b" or "electronic". Adding specific subgenre tags to `DEFAULT_TAG_SETS` helps marginally. For production use, a fine-tuned classifier is preferable.
+**CLAP checkpoint `laion/larger_clap_music` is broken on the HF Hub — do not use (Session 2026-07-13):** its HF-converted text encoder collapses — `logit_scale_a.exp()` ≈ 1.0 (healthy: ~20–100), and text embeddings for arbitrary/unrelated inputs are 0.998–0.999 cosine-similar, so tag scores are noise decoupled from audio content. Confirmed via [LAION-AI/CLAP#126](https://github.com/LAION-AI/CLAP/issues/126) (R@1 0.9175→0.4700 after HF conversion of this exact checkpoint family) and [HF discussion](https://huggingface.co/laion/larger_clap_music/discussions/2) (reported Dec 2023, unfixed, 4 confirmations). The underlying original checkpoint (`music_audioset_epoch_15_esc_90.14.pt`, 90.14% zero-shot ESC50 / 71% GTZAN via the `laion_clap` pip package) is fine — only the HF conversion is defective. Switched to `laion/clap-htsat-fused` (verified healthy: `logit_scale_a.exp()` ≈ 27.8) as an immediate unblock. Full investigation: `CLAP_Handoff_2026-07-13_v2.md` (repo root).
+
+**CLAP genre accuracy on niche genres:** `laion/clap-htsat-fused` is general-purpose, not music-specialized — it does not reliably distinguish metal subgenres (gothic, doom, black, death), and shows an unexplained bias toward "hip-hop" scoring high regardless of genre. Adding specific subgenre tags to `DEFAULT_TAG_SETS` helps marginally. Recovering the music-specialized model via the original `.pt` checkpoint + `laion_clap` package is planned (see handoff doc, Stage 2) but not yet implemented.
 
 **BPM metric-level ambiguity:** librosa's DP beat tracker detects the Quarter-Note pulse. In genres with strong Half-Time feel (e.g., AI-generated metal/electronic), the detected BPM may be the "groove pulse" rather than the "felt" tempo. Example: 4 AI-generated tracks measured at 92–117 BPM felt like 140–150 BPM. Root cause unclear without knowing the DAW project BPM. No automatic correction — genre-specific heuristic would be required.
 
@@ -310,8 +312,8 @@ Zero-shot genre/mood classification as a new analysis feature. CLAP (Contrastive
 
 ### Model
 
-`laion/larger_clap_music` on HuggingFace
-- Music-specialized (528K downloads)
+`laion/clap-htsat-fused` on HuggingFace (switched from `laion/larger_clap_music` 2026-07-13 — that checkpoint's HF conversion is defective, see Known Issues & Gotchas)
+- General-purpose (not music-specialized — accepted trade-off for now)
 - Native `transformers` integration
 - ~600 MB VRAM
 - Apache 2.0 license

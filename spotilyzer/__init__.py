@@ -22,6 +22,12 @@ MERT_CHUNK_SEC = 30                # Chunk-Größe für MERT-Inferenz; Volltrack
                                    # (MERT-Transformer: O(n²) Attention → kein Full-Track-Modus)
 
 # CLAP-Konfiguration
-CLAP_MODEL_NAME = "laion/larger_clap_music"
+# HINWEIS: "laion/larger_clap_music" ist auf dem HF Hub defekt (Text-Encoder-Kollaps
+# nach der Konvertierung, logit_scale_a ≈ 1.0 statt ~20-100) — siehe
+# github.com/LAION-AI/CLAP/issues/126 und huggingface.co/laion/larger_clap_music/discussions/2.
+# clap-htsat-fused ist general-purpose (nicht musik-spezialisiert), aber nachweislich
+# funktionsfähig. Siehe CLAP_Handoff_2026-07-13_v2.md für Details und den Plan zur
+# Wiederherstellung des musik-spezialisierten Modells via laion_clap-Paket (Stage 2).
+CLAP_MODEL_NAME = "laion/clap-htsat-fused"
 CLAP_CHUNK_SEC = 10                # Natives CLAP-Fenster (ClapProcessor trunciert auf 10s);
                                    # Volltracks werden in 10s-Segmente aufgeteilt.

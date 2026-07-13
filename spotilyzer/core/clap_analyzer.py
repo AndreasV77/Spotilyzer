@@ -1,7 +1,8 @@
 """
 CLAPAnalyzer - Singleton für LAION CLAP Zero-Shot Audio-Text-Klassifikation.
 
-Nutzt laion/larger_clap_music für Genre/Mood-Ähnlichkeitsanalyse ohne Training.
+Nutzt laion/clap-htsat-fused für Genre/Mood-Ähnlichkeitsanalyse ohne Training.
+(laion/larger_clap_music wurde verworfen: defekte HF-Konvertierung, siehe CLAUDE.md.)
 Audio wird gegen konfigurierbare Text-Tags verglichen (Cosine Similarity).
 
 Usage:

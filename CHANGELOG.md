@@ -8,6 +8,7 @@ History before the first entry below lives in `git log`.
 ---
 
 ## 2026-07-13
+- spotilyzer/__init__.py — CLAP_MODEL_NAME switched from laion/larger_clap_music to laion/clap-htsat-fused: the former's HF conversion is defective (text encoder collapse, logit_scale_a≈1.0 vs healthy ~20-100; confirmed via LAION-AI/CLAP#126 and HF discussion #2), producing near-identical genre/mood scores regardless of audio content. General-purpose model accepted as interim trade-off; music-specialized recovery via laion_clap package planned (CLAP_Handoff_2026-07-13_v2.md).
 - spotilyzer/data/models.py — AnalysisResult.model_id (str|None): date-suffix of the active model (e.g. "20260529"); serialized in to_dict()/from_dict(); None for legacy results (backward-compatible).
 - spotilyzer/core/pipeline.py — model_id extracted from the model filename stem at init, exposed via new `model_id` property, set on every AnalysisResult produced.
 - spotilyzer/data/persistence.py — new append_to_log()/load_log() for spotilyzer_log.jsonl: append-only historical record of all successful analyses, separate from the session cache spotilyzer_results.json; corrupt lines skipped on load.
