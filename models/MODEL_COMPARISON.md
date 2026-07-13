@@ -13,38 +13,38 @@
 
 ## Active Models (as of 2026-07-13)
 
-### Currently deployed: `spotilyzer_model_MERTv1330M_main+spotify_charts+kworb_validated_20260529.joblib`
+### Currently deployed: `spotilyzer_model_MERTv1330M_depth4refresh_main+spotify_charts+kworb_validated_20260713.joblib` (SLYZR 1.3)
 
 | Metric | Value | Target | Status |
 |---|---|---|---|
-| **Hit Recall** | **86.9%** | ≥ 80% | ✅ reached |
-| **Flop Recall** | **67.5%** | ≥ 50% | ✅ reached |
-| **Balanced Accuracy** | **63.0%** | ≥ 65% | ⚠️ −2.0 pp |
-| Mid Recall | 34.7% | — | (known weakness) |
+| **Balanced Accuracy** | **64.3%** | ≥ 65% | ⚠️ −0.7 pp |
+| **Hit Recall** | **82.4%** | ≥ 80% | ✅ reached |
+| **Flop Recall** | **74.5%** | ≥ 50% | ✅ reached |
+| Mid Recall | 36.0% | — | (known weakness) |
 
-- Hyperparameters: depth=5, colsample=0.8
-- Training data: 22,722 samples (validated only)
-- Holdout: 4,545 samples — 2,999 Hits / 1,131 Mids / 415 Flops
+- Hyperparameters: depth=4, colsample=0.6 — standing default (`SpotilyzerTraining/configs/training.yaml`)
+- Training data: 24,170 samples (validated only; Kworb + Spotify Charts refreshed 2026-07-13)
+- Holdout: 4,834 samples
 
-**2026-07-13 decision:** depth=5/col=0.8 judged a taste-call trade (a few points of Hit Recall
-for lower BA/Flop Recall/confidence), not a technical win. depth=4/col=0.6 is now the standing
-hyperparameter default in `SpotilyzerTraining/configs/training.yaml`. The former `_20260319`
-Alternative (same hyperparameters, March data) has been archived to `P:\BACKUP\Archive` —
-superseded by a fresh depth=4/col=0.6 sweep on 2026-07-13 data (24,170 validated samples):
+**2026-07-13 decision:** depth=5/col=0.8 (previously deployed as `_20260529`, SLYZR 1.2) judged
+a taste-call trade — a few points of Hit Recall for lower BA/Flop Recall/confidence — not a
+technical win. depth=4/col=0.6 is the standing hyperparameter default going forward. `_20260529`
+retired to `P:\BACKUP\Archive\Spotilyzer_model_20260529_retired_2026-07-13.zip`. Full sweep on
+fresh data (24,170 validated samples) before deciding:
 
 | Config | BA | Hit R. | Flop R. |
 |---|---|---|---|
-| depth=4/col=0.6 | 64.3% | 82.4% | 74.5% |
+| **depth=4/col=0.6 (deployed, SLYZR 1.3)** | **64.3%** | 82.4% | 74.5% |
 | depth=4/col=0.7 | 64.5% | 82.8% | 74.7% |
 | depth=4/col=0.8 | 64.7% | 82.8% | 75.2% |
-| depth=3/col=0.8 | 65.3% (first ≥65% BA) | 79.4% | 81.0% |
+| depth=3/col=0.8 (kept for manual spot-testing) | 65.3% (first ≥65% BA) | 79.4% | 81.0% |
 | depth=5/col=0.7 | 63.1% | 86.3% | 69.6% |
-| depth=5/col=0.8 (current, refreshed) | 62.2% | 86.5% | 67.7% |
+| depth=5/col=0.8 (= old `_20260529` config, refreshed) | 62.2% | 86.5% | 67.7% |
 
-Full training/evaluation reports for all six live in `SpotilyzerTraining/outputs/{models,reports}/`
-(experiment labels `depth4refresh`, `d4c07`, `d4c08`, `d3c08`, `d5c07`, plus the unlabeled
-depth=5/col=0.8 refresh). **Which one replaces `_20260529` as deployed is not yet decided** —
-update this file and `active_model.txt` once that call is made.
+Final triage kept only `depth4refresh` (deployed) and `d3c08` (depth=3/col=0.8, the only config
+crossing BA≥65%, kept in `SpotilyzerTraining/outputs/models/` for manual testing on varied
+tracks — not a deploy candidate yet). The other four offered no distinct trade-off point beyond
+this table and were archived to `P:\BACKUP\Archive\Spotilyzer_model_archive_2026-07-13_batch2.zip`.
 
 ---
 
@@ -61,7 +61,8 @@ update this file and `active_model.txt` once that call is made.
 | `MERTv1330M_main+spotify_charts+kworb_validated_20260319` | 5 | 8,960 val. | 1,173 | 63.0% | 72.8% | 68.7% |
 | `MERTv1330M_main+spotify_charts+kworb_validated_20260319` | 6 | 22,722 val. | 4,545 | 64.2% | 82.5% | 73.5% |
 | `MERTv1330M_main+spotify_charts+kworb_validated_20260331` | 8 | 22,722 val. | 4,545 | 63.0% | 86.9% | 67.5% |
-| **`MERTv1330M_main+spotify_charts+kworb_validated_20260529`** | **10** | **22,722 val.** | **4,545** | **63.0%** | **86.9%** | **67.5%** |
+| `MERTv1330M_main+spotify_charts+kworb_validated_20260529` (retired 2026-07-13) | 10 | 22,722 val. | 4,545 | 63.0% | 86.9% | 67.5% |
+| **`MERTv1330M_depth4refresh_main+spotify_charts+kworb_validated_20260713`** | **11** | **24,170 val.** | **4,834** | **64.3%** | **82.4%** | **74.5%** |
 
 *\* Session-1 model had a label-swap bug (hit/mid swapped in report) — value not directly comparable.*
 
@@ -76,7 +77,8 @@ Session 4  (5,660 samples,   1,216 Hits):  55.1%  (+17.6 pp)
 Session 5  (8,960 samples,   3,713 Hits):  72.8%  (+17.7 pp)
 Session 6  (22,722 samples, 14,991 Hits):  82.5%  (+9.7 pp)   ✅ Target reached
 Session 8  (depth=5):                      86.9%  (+4.4 pp)
-Session 10 (retrain, depth=5):             86.9%  (=)         ← Default model
+Session 10 (retrain, depth=5):             86.9%  (=)         ← retired 2026-07-13
+Session 11 (24,170 samples, depth=4):      82.4%  (-4.5 pp)   ← deployed (BA-priority, not Hit-Recall-priority)
 ```
 
 ---
@@ -94,13 +96,13 @@ Kworb markets: us, gb, de, jp, br, mx (Session 5) + fr, au, ca (0.85) + it, se, 
 
 ---
 
-## Holdout Class Distribution
+## Holdout Class Distribution (2026-07-13, 4,834 samples)
 
-| Class | Samples | Share | Recall (Default) | Recall (Alt.) |
-|-------|---------|-------|-----------------|---------------|
-| Hit   | 2,999   | 66%   | 86.9%           | 82.5%         |
-| Mid   | 1,131   | 25%   | 34.7%           | 36.6%         |
-| Flop  | 415     | 9%    | 67.5%           | 73.5%         |
+| Class | Samples | Share | Recall (deployed, depth=4/col=0.6) |
+|-------|---------|-------|-----------------|
+| Hit   | 3,196   | 66%   | 82.4%           |
+| Mid   | 1,223   | 25%   | 36.0%           |
+| Flop  | 415     | 9%    | 74.5%           |
 
 > **Note:** The high Hit share in the holdout (66%) reflects the kworb dataset.
 > In real-world use the Hit share will be considerably lower.

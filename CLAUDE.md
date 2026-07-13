@@ -237,33 +237,33 @@ This pattern is applied in `embedder.py`, `audio_info.py`, and `clap_analyzer.py
 
 ## Model Performance (current)
 
-All metrics on real holdout set (20%, 4545 samples). Source: SpotilyzerTraining `evaluation_report_*.json`. **Note:** holdout samples are 30s clips (one clip = one Deezer preview). Production inference averages chunk probabilities across the full track; song-level evaluation is still pending.
+All metrics on real holdout set (20%). Source: SpotilyzerTraining `evaluation_report_*.json`. **Note:** holdout samples are 30s clips (one clip = one Deezer preview). Production inference averages chunk probabilities across the full track; song-level evaluation is still pending.
 
-### Active Model: MERTv1330M_main+spotify_charts+kworb_validated_20260529 (1024-dim)
+### Active Model: MERTv1330M_depth4refresh_main+spotify_charts+kworb_validated_20260713 (SLYZR 1.3, 1024-dim)
 
-Trained on **~22,722 validated samples** (Deezer scouting + Spotify Top 200 Charts + Kworb historical charts, 12 markets). ~14,991 Hits. XGBoost: max_depth=5, colsample=0.8, n_estimators=500.
+Trained on **24,170 validated samples** (Deezer scouting + Spotify Top 200 Charts + Kworb historical charts, 12 markets; refreshed 2026-07-13). XGBoost: max_depth=4, colsample=0.6, n_estimators=500 — the BA-optimal config from Session 8, now the standing default. Holdout: 4,834 samples.
 
 | Metric | Value | Target |
 |--------|-------|--------|
-| Balanced Accuracy | **63.0%** | ≥ 65% |
-| Hit Recall | **86.9%** ✓ | ≥ 80% |
-| Flop Recall | **67.5%** ✓ | ≥ 50% |
-| Mid Recall | 34.7% | — |
+| Balanced Accuracy | **64.3%** | ≥ 65% |
+| Hit Recall | **82.4%** ✓ | ≥ 80% |
+| Flop Recall | **74.5%** ✓ | ≥ 50% |
+| Mid Recall | 36.0% | — |
 
 **Training ceiling reached (Session 8, 2026-03-31):** Hyperparameter sweeps (max_depth 4→6, colsample 0.6→0.8) show monotonic trade-off: more depth → Hit Recall ↑, BA/Flop ↓. Audio-only ceiling at ~64–65% BA. Next BA improvement requires additional features (librosa, metadata) or artist dedup in training.
 
-**2026-07-13 revision:** depth=5/col=0.8 (this active model's config) is now judged a taste-call trade — a few points of Hit Recall for lower BA/Flop Recall/confidence, not a technical improvement. **depth=4/col=0.6 is the standing default going forward** (set in `SpotilyzerTraining/configs/training.yaml`). The former Alternative model (`_20260319`) has been archived to `P:\BACKUP\Archive` — its dataset (March, 22,722 samples) is superseded by a fresh sweep on 24,170 validated samples (Kworb+Spotify Charts refresh):
+**2026-07-13 decision:** depth=5/col=0.8 (previously deployed as `_20260529`, SLYZR 1.2: BA 63.0%/Hit 86.9%/Flop 67.5%) judged a taste-call trade — a few points of Hit Recall for lower BA/Flop Recall/confidence — not a technical win. **depth=4/col=0.6 is the standing hyperparameter default** (set in `SpotilyzerTraining/configs/training.yaml`), and this model is deployed as its 2026-07-13 refresh. `_20260529` retired to `P:\BACKUP\Archive\Spotilyzer_model_20260529_retired_2026-07-13.zip`. Full sweep on fresh data (24,170 validated samples) before deciding:
 
 | Config | BA | Hit R. | Flop R. |
 |--------|-----|--------|---------|
-| depth=5/col=0.8 (this active model, refreshed) | 62.2% | 86.5% | 67.7% |
-| depth=5/col=0.7 | 63.1% | 86.3% | 69.6% |
-| depth=4/col=0.6 (standing default) | 64.3% | 82.4% | 74.5% |
+| **depth=4/col=0.6 (deployed)** | **64.3%** | 82.4% | 74.5% |
 | depth=4/col=0.7 | 64.5% | 82.8% | 74.7% |
 | depth=4/col=0.8 | 64.7% | 82.8% | 75.2% |
-| depth=3/col=0.8 | **65.3%** (first ≥65% BA) | 79.4% | 81.0% |
+| depth=3/col=0.8 (kept for manual spot-testing) | **65.3%** (first ≥65% BA) | 79.4% | 81.0% |
+| depth=5/col=0.7 | 63.1% | 86.3% | 69.6% |
+| depth=5/col=0.8 (= retired `_20260529` config, refreshed) | 62.2% | 86.5% | 67.7% |
 
-None of the six displaced depth=4/col=0.6 as the standing choice. **Which candidate (if any) replaces this active model is not yet decided** — see `SpotilyzerTraining/CLAUDE.md` Session 11 and `models/MODEL_COMPARISON.md` for full detail. Post-hoc logit adjustment (τ=0.25) on the old depth=4/col=0.6 baseline achieved BA=65.3% but Hit Recall dropped to 73.2% — both targets simultaneously not achievable technically via that route either.
+`d3c08` (depth=3/col=0.8) is kept in `SpotilyzerTraining/outputs/models/` for manual testing on varied tracks — the only config crossing BA≥65%, at the cost of Hit Recall dropping below 80%. Not a deploy candidate yet. Post-hoc logit adjustment (τ=0.25) on the old depth=4/col=0.6 baseline achieved BA=65.3% but Hit Recall dropped to 73.2% — both targets simultaneously not achievable technically via that route either. Full detail: `SpotilyzerTraining/CLAUDE.md` Session 11, `models/MODEL_COMPARISON.md`.
 
 **Practical use:** Hit Recall target ≥80% reached. Flop filter works well. Mid class remains difficult (34.7% Recall) — frequently confused with Hit.
 
