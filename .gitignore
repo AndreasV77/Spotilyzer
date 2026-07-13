@@ -44,6 +44,8 @@ local_audio/
 
 # Spotilyzer Runtime
 spotilyzer_results.json
+spotilyzer_results.json_*
+spotilyzer_log.jsonl
 *.csv
 
 # Modell-Binaries (zu groß für Git, werden lokal gebaut)

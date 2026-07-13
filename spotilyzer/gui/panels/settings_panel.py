@@ -468,6 +468,22 @@ class SettingsPanel(QDockWidget):
         """Gibt den benutzerdefinierten Modell-Pfad zurück (leer = Auto-Erkennung)."""
         return self._model_custom_edit.text().strip()
 
+    def set_current_mode(self, mode: AppMode) -> None:
+        """Synchronisiert die Modus-ComboBox mit extern geändertem AppMode
+        (z.B. Toolbar-Buttons), ohne einen erneuten Save/Signal-Zyklus auszulösen."""
+        mode_list = list(AppMode)
+        if mode not in mode_list:
+            return
+        index = mode_list.index(mode)
+        if self._mode_combo.currentIndex() == index:
+            return
+        self._mode_combo.blockSignals(True)
+        self._mode_combo.setCurrentIndex(index)
+        self._mode_combo.blockSignals(False)
+        # view/mode-Key ebenfalls aktualisieren, damit ComboBox-Anzeige und
+        # persistierter Wert nicht auseinanderlaufen (z.B. bei Toolbar-Wechsel)
+        self._save_settings()
+
     # ── Persistenz (QSettings) ───────────────────────────────────────
 
     def _save_settings(self) -> None:

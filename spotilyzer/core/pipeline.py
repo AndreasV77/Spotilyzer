@@ -134,6 +134,11 @@ class AnalysisPipeline:
         return self._model_info
 
     @property
+    def model_id(self) -> Optional[str]:
+        """Datum-Suffix des aktiven Modells (z.B. '20260529'), None wenn nicht erkennbar."""
+        return self._model_id
+
+    @property
     def device(self) -> str:
         """Aktuelles Device (cuda/cpu)."""
         return self.embedder.device

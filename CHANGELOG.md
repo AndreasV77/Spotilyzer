@@ -7,6 +7,17 @@ History before the first entry below lives in `git log`.
 
 ---
 
+## 2026-07-13
+- spotilyzer/data/models.py — AnalysisResult.model_id (str|None): date-suffix of the active model (e.g. "20260529"); serialized in to_dict()/from_dict(); None for legacy results (backward-compatible).
+- spotilyzer/core/pipeline.py — model_id extracted from the model filename stem at init, exposed via new `model_id` property, set on every AnalysisResult produced.
+- spotilyzer/data/persistence.py — new append_to_log()/load_log() for spotilyzer_log.jsonl: append-only historical record of all successful analyses, separate from the session cache spotilyzer_results.json; corrupt lines skipped on load.
+- spotilyzer/gui/app.py — append_to_log() called on every successful result_ready.
+- models/model_names.json — new: human-readable model aliases ("SLYZR 1.1"/"SLYZR 1.2") for future ModelPanel and result-card badges.
+- spotilyzer/gui/panels/settings_panel.py — new set_current_mode(): syncs the mode ComboBox (and persisted view/mode key) when AppMode changes externally via toolbar buttons; fixes a desync where the Settings-panel dropdown showed a stale mode after restart even though the applied mode (app/mode key) was correctly restored.
+- spotilyzer/gui/app.py — _set_app_mode now calls settings_panel.set_current_mode() to keep the ComboBox in sync with toolbar-driven mode changes.
+- spotilyzer/gui/app.py — new _filter_already_analyzed(): pre-flight duplicate check before queuing files for analysis; skips files already analyzed with the currently active model (model_id-aware — re-analysis with a different active model is intentionally allowed, not treated as a duplicate); status bar reports skipped files.
+- spotilyzer/gui/app.py — _on_result_ready duplicate guard (2026-06-02) made model_id-aware (path+model_id instead of path-only); previously a re-analysis with a different active model was silently dropped.
+
 ## 2026-06-02
 - spotilyzer/gui/app.py — duplicate guard in _on_result_ready: path-based check skips result if same path already in _results (prevents double-analysis of folders with symlinked/copied files).
 - spotilyzer/gui/app.py — settings persistence fix: QApplication.aboutToQuit connected to _save_app_settings as fallback for Ctrl+C terminal kills (closeEvent not triggered).

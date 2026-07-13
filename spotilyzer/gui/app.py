@@ -441,6 +441,28 @@ class SpotilyzerApp(QMainWindow):
 
     # ── Analyse ──────────────────────────────────────────────────────
 
+    def _filter_already_analyzed(self, files: list[str]) -> tuple[list[str], list[str]]:
+        """Trennt bereits analysierte Dateien von neuen.
+
+        Ein Duplikat liegt vor, wenn derselbe Pfad bereits ein erfolgreiches
+        Ergebnis mit dem aktuell aktiven Modell hat. Re-Analyse mit einem
+        anderen Modell (model_id) gilt bewusst nicht als Duplikat.
+
+        Returns:
+            (neue_dateien, uebersprungene_dateien)
+        """
+        current_model_id = self._pipeline.model_id if self._pipeline else None
+        analyzed = {
+            (str(Path(r.path).resolve()), r.model_id)
+            for r in self._results
+            if not r.is_error
+        }
+        new_files, skipped = [], []
+        for f in files:
+            key = (str(Path(f).resolve()), current_model_id)
+            (skipped if key in analyzed else new_files).append(f)
+        return new_files, skipped
+
     def _on_files_selected(self, files: list[str]) -> None:
         """Dateien zur Analyse ausgewählt (via Drop, Browse oder FilePanel)."""
         if not self._pipeline:
@@ -458,6 +480,20 @@ class SpotilyzerApp(QMainWindow):
                 "Analyse läuft",
                 "Es läuft bereits eine Analyse.\n"
                 "Bitte warte bis diese abgeschlossen ist.",
+            )
+            return
+
+        files, skipped = self._filter_already_analyzed(files)
+        if skipped:
+            names = ", ".join(Path(f).name for f in skipped[:5])
+            if len(skipped) > 5:
+                names += f" (+{len(skipped) - 5} weitere)"
+            self._statusbar.showMessage(
+                f"{len(skipped)} bereits analysiert, übersprungen: {names}", 6000
+            )
+        if not files:
+            self._central.set_status(
+                "Alle ausgewählten Dateien wurden mit dem aktiven Modell bereits analysiert"
             )
             return
 
@@ -494,8 +530,13 @@ class SpotilyzerApp(QMainWindow):
 
     def _on_result_ready(self, result: AnalysisResult) -> None:
         """Einzelnes Analyse-Ergebnis bereit."""
-        # Duplikat-Schutz: gleiche Datei (path) nicht zweimal aufnehmen
-        if any(r.path == result.path for r in self._results):
+        # Duplikat-Schutz (Sicherheitsnetz, greift v.a. wenn die Analyse nicht über
+        # _on_files_selected angestoßen wurde): gleicher Pfad + gleiches Modell = Duplikat.
+        # Modell-übergreifend ist eine Re-Analyse gewollt (siehe _filter_already_analyzed).
+        if any(
+            r.path == result.path and r.model_id == result.model_id
+            for r in self._results
+        ):
             return
         self._results.append(result)
         self._central.add_result(result)
@@ -593,6 +634,7 @@ class SpotilyzerApp(QMainWindow):
                 mode = AppMode.BALANCED
         self._app_mode = mode
         self._central.set_app_mode(mode)
+        self._settings_panel.set_current_mode(mode)
 
         if mode == AppMode.SIMPLE:
             # Alle Panels ausblenden
