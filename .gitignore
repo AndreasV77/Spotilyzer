@@ -9,7 +9,10 @@ build/
 
 # Tokens/Secrets
 .env
+.cache
 .cache/
+*.cache
+.env.local
 
 # Training: lokale Pfad-Konfiguration (Vorlage: training/paths.env.example)
 training/paths.env
@@ -46,6 +49,7 @@ local_audio/
 spotilyzer_results.json
 spotilyzer_results.json_*
 spotilyzer_log.jsonl
+spotilyzer_log_*.json
 *.csv
 
 # Modell-Binaries (zu groß für Git, werden lokal gebaut)
@@ -56,6 +60,12 @@ models/*.joblib
 .claire/
 .claude/
 .codex/
+.remember/
 
 # Lokale Test-Ordner
 TEST/
+
+# Interne Arbeitsprozess-Dokumente (nicht oeffentlich)
+DOC_AUDIT.md
+ERRATA.md
+CLAP_Handoff_*.md

@@ -29,7 +29,7 @@
 **2026-07-13 decision:** depth=5/col=0.8 (previously deployed as `_20260529`, SLYZR 1.2) judged
 a taste-call trade — a few points of Hit Recall for lower BA/Flop Recall/confidence — not a
 technical win. depth=4/col=0.6 is the standing hyperparameter default going forward. `_20260529`
-retired to `P:\BACKUP\Archive\Spotilyzer_model_20260529_retired_2026-07-13.zip`. Full sweep on
+retired to `<local-backup-archive>/Spotilyzer_model_20260529_retired_2026-07-13.zip`. Full sweep on
 fresh data (24,170 validated samples) before deciding:
 
 | Config | BA | Hit R. | Flop R. |
@@ -44,7 +44,7 @@ fresh data (24,170 validated samples) before deciding:
 Final triage kept only `depth4refresh` (deployed) and `d3c08` (depth=3/col=0.8, the only config
 crossing BA≥65%, kept in `SpotilyzerTraining/outputs/models/` for manual testing on varied
 tracks — not a deploy candidate yet). The other four offered no distinct trade-off point beyond
-this table and were archived to `P:\BACKUP\Archive\Spotilyzer_model_archive_2026-07-13_batch2.zip`.
+this table and were archived to `<local-backup-archive>/Spotilyzer_model_archive_2026-07-13_batch2.zip`.
 
 ---
 

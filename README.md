@@ -184,3 +184,25 @@ Total size after strip: ~3 GB.
 
 **Long-term**
 - Genre-specific models (one per cluster)
+
+---
+
+## License
+
+Licensed under the **PolyForm Noncommercial License 1.0.0** — see [LICENSE](LICENSE).
+
+> **Note:** PolyForm Noncommercial is a *source-available*, **not** an OSI-approved
+> open-source license. The source is public and may be used for noncommercial
+> purposes (personal projects, research, teaching). **Any commercial use requires a
+> separate license.** Commercial inquiries: andreasv@andreasv.de
+
+### Third-party models
+
+Model weights are downloaded at runtime and carry their own licenses:
+
+| Model | Source | License |
+|---|---|---|
+| MERT-v1-330M | `m-a-p/MERT-v1-330M` | see model card on HuggingFace |
+| CLAP | `laion/clap-htsat-fused` | Apache 2.0 |
+
+The trained classifier in `models/` is covered by this repository's license.

@@ -2,9 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Note on AGENTS.md:** The file `AGENTS.md` in the repo root is a point-in-time English snapshot generated from this CLAUDE.md for AI assistants other than Claude Code (created 2026-07-14). It is not continuously maintained — this CLAUDE.md is the sole authoritative document.
+
 ## Documentation Workflow
 
 Doc consistency is maintained via a read-only **audit** → `ERRATA.md` → separate **fix pass** cycle, defined in `DOC_AUDIT.md`. Before fixing any defect referenced by ID (e.g. "SP-011"), read `DOC_AUDIT.md` for the rules and `ERRATA.md` for the defect. Log every fix as one line in `CHANGELOG.md`.
+
+**Note:** `DOC_AUDIT.md`, `ERRATA.md` and the CLAP handoff notes are local-only working documents and are intentionally not tracked in the public repository. Only `CHANGELOG.md` is public.
 
 ## Project Overview
 
@@ -32,7 +36,7 @@ Optional CLAP layer (zero-shot, per-request): genre + mood tags via `laion/clap-
 | | This Project | Training Sub-project |
 |---|----------------|---------------------|
 | **Purpose** | GUI, CLI, analysis pipeline | Data acquisition, labeling, model training |
-| **Local** | `G:\Dev\source\Spotilyzer` | `G:\Dev\source\SpotilyzerTraining` |
+| **Local** | this repository | sibling checkout `../SpotilyzerTraining` |
 | **GitHub** | `github.com/AndreasV77/Spotilyzer` | `github.com/AndreasV77/SpotilyzerTraining` |
 
 ---
@@ -81,7 +85,7 @@ clarity take priority over tonal fidelity.
 
 ### For Training-Related Questions
 
-→ See `G:\Dev\source\SpotilyzerTraining\CLAUDE.md`
+→ See `CLAUDE.md` in the SpotilyzerTraining checkout
 
 **NOT in this repo:**
 - Modify/extend data sources
@@ -124,7 +128,7 @@ pyinstaller spotilyzer.spec
 python strip_cuda.py
 ```
 
-**⚠ Dev-Worktree caveat**: The editable install's package lookup is shadowed by the main repo's `spotilyzer/` directory if Python is invoked from `G:\Dev\Source\Spotilyzer\`. Always `cd` into the worktree before using `-m spotilyzer.cli.analyze`.
+**⚠ Dev-Worktree caveat**: The editable install's package lookup is shadowed by the main repo's `spotilyzer/` directory if Python is invoked from the main repo root. Always `cd` into the worktree before using `-m spotilyzer.cli.analyze`.
 
 ## Package Architecture
 
@@ -172,7 +176,7 @@ spotilyzer_gui.py        # legacy Tkinter GUI (predates PySide6 rewrite)
 The `training/` folder in this repository is **outdated**. The active training scripts are in:
 
 ```
-G:\Dev\source\SpotilyzerTraining\
+../SpotilyzerTraining/
 ```
 
 The old scripts are kept as reference but should no longer be used.
@@ -253,7 +257,7 @@ Trained on **24,170 validated samples** (Deezer scouting + Spotify Top 200 Chart
 
 **Training ceiling reached (Session 8, 2026-03-31):** Hyperparameter sweeps (max_depth 4→6, colsample 0.6→0.8) show monotonic trade-off: more depth → Hit Recall ↑, BA/Flop ↓. Audio-only ceiling at ~64–65% BA. Next BA improvement requires additional features (librosa, metadata) or artist dedup in training.
 
-**2026-07-13 decision:** depth=5/col=0.8 (previously deployed as `_20260529`, SLYZR 1.2: BA 63.0%/Hit 86.9%/Flop 67.5%) judged a taste-call trade — a few points of Hit Recall for lower BA/Flop Recall/confidence — not a technical win. **depth=4/col=0.6 is the standing hyperparameter default** (set in `SpotilyzerTraining/configs/training.yaml`), and this model is deployed as its 2026-07-13 refresh. `_20260529` retired to `P:\BACKUP\Archive\Spotilyzer_model_20260529_retired_2026-07-13.zip`. Full sweep on fresh data (24,170 validated samples) before deciding:
+**2026-07-13 decision:** depth=5/col=0.8 (previously deployed as `_20260529`, SLYZR 1.2: BA 63.0%/Hit 86.9%/Flop 67.5%) judged a taste-call trade — a few points of Hit Recall for lower BA/Flop Recall/confidence — not a technical win. **depth=4/col=0.6 is the standing hyperparameter default** (set in `SpotilyzerTraining/configs/training.yaml`), and this model is deployed as its 2026-07-13 refresh. `_20260529` retired to `<local-backup-archive>/Spotilyzer_model_20260529_retired_2026-07-13.zip`. Full sweep on fresh data (24,170 validated samples) before deciding:
 
 | Config | BA | Hit R. | Flop R. |
 |--------|-----|--------|---------|
